@@ -1,0 +1,1944 @@
+Practise Questions
+-------------------
+
+
+Flutter Isolates
+------------------
+Dart is a single-threaded language.
+concurrency and parallelism, the former 
+standing for async tasks and the latter 
+for tasks running on an isolate.
+
+An async task is a Dart event loop 
+jumping between different parts of your 
+program (processing events) as needed.
+
+What is an isolate?
+
+Dart programs run in an isolate by default.
+
+Isolate is like a little space in a machine, 
+with its memory (a system that stores 
+information that will be needed soon on a 
+short-term basis) and a single thread running 
+an event loop that processes the code.
+
+What is an event loop?
+
+grabs an older event from its event queue, 
+processes it, attends to the next event, and 
+processes it until the events in the event queue 
+are exhausted.
+
+There are two ways to create a different isolate 
+in Dart: the Isolate.spawn() function and the compute() 
+function.
+
+The first way to create an isolate is by using the 
+Isolate.spawn() call. We pass in the method we want to 
+run as the first parameter, while the second argument 
+is the parameter we want to pass to the isolate.
+
+The function passed to the isolate spawn() must 
+be a top-level function *(a function that is not 
+within the boundary of a class) or a static method.
+
+Example::
+
+import 'dart:isolate';
+
+void main() {
+  Isolate.spawn<IsolateModel>(heavyTask, 
+  						IsolateModel(355000, 500));
+}
+
+void heavyTask(IsolateModel model) {
+ int total = 0;
+
+
+ /// Performs an iteration of the specified count
+ for (int i = 1; i < model.iteration; i++) {
+
+   /// Multiplies each index by the multiplier 
+   // and computes the total
+   total += (i * model.multiplier);
+ }
+
+ log("FINAL TOTAL: $total");
+}
+
+class IsolateModel {
+ IsolateModel(this.iteration, this.multiplier);
+
+ final int iteration;
+ final int multiplier;
+}
+
+Communicate between two isolates::
+
+Communication between two isolates can be accomplished 
+by sending messages or values through the ports.
+(ReceivePort and SendPort). these ports work similarly 
+to Stream ; in fact, ReceivePort implements the Stream
+abstract class.  
+
+SendPort can be created from ReceivePort by calling 
+ReceivePort’s sendPort getter method. This is the 
+medium through which messages are being sent to 
+ReceivePort. The ReceivePort, on the other hand, 
+listens to messages from its SendPort.
+
+Example::
+
+import 'dart:isolate';
+
+void main() {
+ createIsolate();
+}
+
+Future createIsolate() async {
+ /// Where I listen to the message from Mike's port
+ ReceivePort myReceivePort = ReceivePort();
+
+ /// Spawn an isolate, passing my receivePort sendPort
+ Isolate.spawn<SendPort>(heavyComputationTask, 
+ 			myReceivePort.sendPort);
+
+ /// Mike sends a senderPort for me to enable me to 
+ 	///	send him a message via his sendPort.
+ /// I receive Mike's senderPort via my receivePort
+ SendPort mikeSendPort = await myReceivePort.first;
+
+ /// I set up another receivePort to receive Mike's response.
+ ReceivePort mikeResponseReceivePort = ReceivePort();
+
+ /// I send Mike a message using mikeSendPort. 
+ /// I send him a list,
+ /// which includes my message, preferred type of coffee, 
+ /// and finally
+ /// a sendPort from mikeResponseReceivePort that enables Mike to send a message back to me.
+ mikeSendPort.send([
+   "Mike, I'm taking an Espresso coffee",
+   "Espresso",
+   mikeResponseReceivePort.sendPort
+ ]);
+
+ /// I get Mike's response by listening to mikeResponseReceivePort
+ final mikeResponse = await mikeResponseReceivePort.first;
+ log("MIKE'S RESPONSE: ==== $mikeResponse");
+}
+
+Create a new isolate using compute()::
+
+compute<Q, R>() accepts two generic types: Q is the isolate 
+function parameter type, and R is the return type of the isolate function.
+
+Example::
+
+import 'package:flutter/foundation.dart';
+
+void main() {
+  compute<IsolateModel, void>(heavyTask, IsolateModel(355000, 500));
+}
+
+void heavyTask(IsolateModel model) {
+int total = 0;
+
+/// Performs an iteration of the specified count
+for (int i = 1; i < model.iteration; i++) {
+
+  /// Multiplies each index by the multiplier and computes the total
+  total += (i * model.multiplier);
+}
+
+log("FINAL TOTAL: $total");
+}
+
+class IsolateModel {
+IsolateModel(this.iteration, this.multiplier);
+
+final int iteration;
+final int multiplier;
+}
+
+
+void heavyComputationTask(SendPort mySendPort) async {
+ /// Set up a receiver port for Mike
+ ReceivePort mikeReceivePort = ReceivePort();
+
+ /// Send Mike receivePort sendPort via mySendPort
+ mySendPort.send(mikeReceivePort.sendPort);
+
+ /// Listen to messages sent to Mike's receive port
+ await for (var message in mikeReceivePort) {
+   if (message is List) {
+     final myMessage = message[0];
+     final coffeeType = message[1];
+     log(myMessage);
+
+     /// Get Mike's response sendPort
+     final SendPort mikeResponseSendPort = message[2];
+
+     /// Send Mike's response via mikeResponseSendPort
+     mikeResponseSendPort.send("You're taking $coffeeType, and I'm taking Latte");
+   }
+ }
+}
+
+To kill an isolate manually, use isolate.kill(). 
+To pause an isolate, use isolate.pause(). To 
+resume a paused isolate, use isolate.resume()
+
+An Isolate object cannot be sent over a SendPort, 
+but the control port and capabilities can be sent, 
+and can be used to create a new functioning Isolate 
+object in the receiving port's isolate.
+
+Each isolate message can deliver one object, which 
+includes anything that’s transitively reachable from 
+that object. Not all object types are sendable
+
+Implementing a simple worker isolate::
+
+
+
+void main() async {
+  // Read some data.
+  final jsonData = await _parseInBackground();
+
+  // Use that data
+  print('Number of JSON keys: ${jsonData.length}');
+}
+
+// Spawns an isolate and waits for the first message
+Future<Map<String, dynamic>> _parseInBackground() async {
+  final p = ReceivePort();
+  await Isolate.spawn(_readAndParseJson, p.sendPort);
+  return await p.first as Map<String, dynamic>;
+}
+
+The _parseInBackground() function contains the code that 
+spawns (creates and starts) the isolate for the background 
+worker, and then returns the result:
+
+1. Before spawning the isolate, the code creates a ReceivePort, 
+which enables the worker isolate to send messages to the main 
+isolate.
+
+2. Next is the call to Isolate.spawn(), which creates and 
+starts the isolate for the background worker. The first 
+argument to Isolate.spawn() is the function that the worker 
+isolate executes: _readAndParseJson. The second argument is 
+the SendPort that the worker isolate can use to send messages 
+to the main isolate. The code doesn’t create a SendPort; it uses 
+the sendPort property of the ReceivePort.
+
+3. Once the isolate is spawned, the main isolate waits for 
+the result. Because the ReceivePort class implements Stream, 
+the first property is an easy way to get the single message 
+that the worker isolate sends.
+
+The spawned isolate executes the following code:
+
+Future<void> _readAndParseJson(SendPort p) async {
+  final fileData = await File(filename).readAsString();
+  final jsonData = jsonDecode(fileData);
+  Isolate.exit(p, jsonData);
+}
+
+The relevant statement is the last one, which exits the 
+isolate, sending jsonData to the passed-in SendPort. 
+Message passing between isolates normally involves data 
+copying, and thus can be slow and increases with the size 
+of the message — O(n) in big O notation. However, when you 
+send the data using Isolate.exit(), then the memory that 
+holds the message in the exiting isolate isn’t copied, but 
+instead is transferred to the receiving isolate. That transfer 
+is quick and completes in constant time — O(1).
+
+Sending multiple messages between isolates::
+
+If you need more communication between isolates, 
+then you need to use the send() method of SendPort. One common 
+pattern, is for the main isolate to send a request message to 
+the worker isolate, which then sends one or more reply messages.
+
+Performance and isolate groups::
+
+When an isolate calls Isolate.spawn(), the two isolates have 
+the same executable code and are in the same isolate group. 
+Isolate groups enable performance optimizations such as sharing 
+code; a new isolate immediately runs the code owned by the 
+isolate group. Also, Isolate.exit() works only when the isolates 
+are in the same isolate group.
+
+
+-------------------------------------------------
+Interesting, userful widgets and some use cases
+--------------------------------------------------
+Change the size of a CheckBox widget::
+
+Transform.scale(
+	scale: 1.3
+	child: Checkbox(
+		value: ..
+		onChanged: ..
+	)
+)
+
+Editing the border shape of a ModalBottomSheet::
+
+showModalBottomSheet(
+	backgroundColor: ...
+	shape: RoundedRectangularBorder()
+	...
+)
+
+How to give color to only one side of a border:: 
+
+Container(
+  decoration: BoxDecoration(
+    border: Border(
+      bottom: BorderSide(
+        color: Colors.red,
+      )
+    )
+  )
+)
+
+Making a button round::
+
+style: ButtonStyle(
+  shape: MatrialStateProperty.all(
+    RoundedRectangularBorder(
+      borderRadius: BorderRadius.circular(18.0),
+    )
+  )
+)
+
+Changing the border shape and background 
+color of formfield ::
+
+TextFormField(
+  decoration: InputDecoration(
+    filled: true,
+ fillColor:
+  const Color.fromARGB(117, 216, 210, 210),
+  border: OutlineInputBorder(
+  borderRadius: BorderRadius.circular(8)),
+  suffix: const Text("\$"),
+),)
+
+Rotating a widget by any degress::
+
+RotatedBox(
+   quarterTurns: 2,
+   child: ... )
+   
+Where each turn represents 90 degrees::
+
+DropdownButton(
+  value: currentValue,
+  items: ["Expenses","Income"].map((e) {
+  return DropdownMenuItem(
+      value: e,
+      child: Text(e));
+  } ).toList(), onChanged: (String? value){
+     setState(() {
+     currentValue = value!;
+});
+
+
+how to open the email app using
+android intent in flutter ::
+
+1. Add android_intent_plus: ^3.0.2 to pubspec.yaml
+2. AndroidIntent intent = 
+    AndroidIntent(
+        action:  "android.intent.action.MAIN",
+        category :"android.intent.category.APP_EMAIL");
+    intent.launch();
+
+:::: To set our device orientation we use 
+SystemChrome which holds a lot of system wide
+configurations ::::
+
+void main() {
+    WigetsFlutterBinding.ensureInitialized();
+    SystemChrome.setPreferrerdOrientation([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+    ]);
+    runApp(myApp());
+}
+
+How to check if we are in landscape or portrait 
+mode ::
+
+var isLandScape = MediaQuery.of(context).orientation = 
+    Orientation.landscape;
+    
+::::: Fix Keyboard OverLap BottomSheet ::::::::::
+    
+showModalBottomSheet(
+    shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25.0))),
+    backgroundColor: Colors.black,
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal:18 ),
+      child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                child: Text('Enter your address',
+                    style: TextStyles.textBody2),
+              ),
+              SizedBox(
+                height: 8.0,
+              ),
+              Padding(
+                padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'adddrss'
+                  ),
+                  autofocus: true,
+                  controller: _newMediaLinkAddressController,
+                ),
+              ),
+
+              SizedBox(height: 10),
+            ],
+          ),
+    ));
+    
+-------------------------------
+How to change my app Icon
+-------------------------------
+To do this we can use the package "flutter_launcher_icons"
+
+we first create a new yaml file or use the pubspec.yaml file
+
+if pubspec.yaml
+
+flutter_icons:
+  #  image_path: "assets/images/icon-128x128.png"
+  image_path_android: "assets/images/icon-710x599-android.png"
+  image_path_ios: "assets/images/icon-1024x1024.png"
+  android: true # can specify file name here e.g. "ic_launcher"
+  ios: true # can specify file name here e.g. "My-Launcher-Icon"
+  adaptive_icon_background: "assets/images/christmas-background.png" 
+  	# only available for Android 8.0 devices and above
+  adaptive_icon_foreground: "assets/images/icon-foreground-432x432.png" 
+  	# only available for Android 8.0 devices and above
+  
+
+if my own .yaml file
+dev_dependencies:
+  flutter_launcher_icons: "^0.9.2"
+
+flutter_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/icon.png"
+  
+  
+then run
+flutter pub get
+flutter pub run flutter_launcher_icons:main -f <your config file name here>
+
+
+-------------------------
+Theme
+--------------------------
+Themes can be set app wide or just for some parts of 
+the app
+
+MaterialApp(
+  title: appName,
+  theme: ThemeData(
+    // Define the default brightness and colors.
+    brightness: Brightness.dark,
+    primaryColor: Colors.lightBlue[800],
+
+    // Define the default font family.
+    fontFamily: 'Georgia',
+
+    // Define the default `TextTheme`. Use this to specify the default
+    // text styling for headlines, titles, bodies of text, and more.
+    textTheme: const TextTheme(
+      headline1: TextStyle(fontSize: 72.0, fontWeight: FontWeight.bold),
+      headline6: TextStyle(fontSize: 36.0, fontStyle: FontStyle.italic),
+      bodyText2: TextStyle(fontSize: 14.0, fontFamily: 'Hind'),
+    ),
+  ),
+  home: const MyHomePage(
+    title: appName,
+  ),
+);
+
+
+Themes for part of an application::
+
+To override the app-wide theme in part of an application, wrap a section 
+of the app in a Theme widget.
+
+There are two ways to approach this: creating a unique ThemeData, or 
+extending the parent theme.
+
+Theme(
+  // Create a unique theme with `ThemeData`
+  data: ThemeData(
+    splashColor: Colors.yellow,
+  ),
+  child: FloatingActionButton(
+    onPressed: () {},
+    child: const Icon(Icons.add),
+  ),
+);
+
+Extending the parent theme::
+
+Theme(
+  // Find and extend the parent theme using `copyWith`. See the next
+  // section for more info on `Theme.of`.
+  data: Theme.of(context).copyWith(splashColor: Colors.yellow),
+  child: const FloatingActionButton(
+    onPressed: null,
+    child: Icon(Icons.add),
+  ),
+);
+
+Using a Theme::
+
+Now that you’ve defined a theme, use it within the widgets’ build() 
+methods by using the Theme.of(context) method.
+
+The Theme.of(context) method looks up the widget tree and returns 
+the nearest Theme in the tree. If you have a standalone Theme defined 
+above your widget, that’s returned. If not, the app’s theme is returned.
+
+Container(
+  color: Theme.of(context).colorScheme.secondary,
+  child: Text(
+    'Text with a background color',
+    style: Theme.of(context).textTheme.headline6,
+  ),
+),
+
+
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    const appName = 'Custom Themes';
+
+    return MaterialApp(
+      title: appName,
+      theme: ThemeData(
+        // Define the default brightness and colors.
+        brightness: Brightness.dark,
+        primaryColor: Colors.lightBlue[800],
+
+        // Define the default font family.
+        fontFamily: 'Georgia',
+
+        // Define the default `TextTheme`. Use this to specify the default
+        // text styling for headlines, titles, bodies of text, and more.
+        textTheme: const TextTheme(
+          headline1: TextStyle(fontSize: 72.0, fontWeight: FontWeight.bold),
+          headline6: TextStyle(fontSize: 36.0, fontStyle: FontStyle.italic),
+          bodyText2: TextStyle(fontSize: 14.0, fontFamily: 'Hind'),
+        ),
+      ),
+      home: const MyHomePage(
+        title: appName,
+      ),
+    );
+  }
+}
+
+class MyHomePage extends StatelessWidget {
+  final String title;
+
+  const MyHomePage({Key? key, required this.title}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+      ),
+      body: Center(
+        child: Container(
+          color: Theme.of(context).colorScheme.secondary,
+          child: Text(
+            'Text with a background color',
+            style: Theme.of(context).textTheme.headline6,
+          ),
+        ),
+      ),
+      floatingActionButton: Theme(
+        data: Theme.of(context).copyWith(splashColor: Colors.yellow),
+        child: FloatingActionButton(
+          onPressed: () {},
+          child: const Icon(Icons.add),
+        ),
+      ),
+    );
+  }
+}
+
+----------------------
+Box Shadow
+-----------------------
+
+import 'package:flutter/material.dart';
+
+void main() => runApp(MyApp());
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: ShadowDemo(),
+      ),
+    );
+  }
+}
+
+class ShadowDemo extends StatefulWidget {
+  @override
+  _ShadowDemoState createState() => _ShadowDemoState();
+}
+
+class _ShadowDemoState extends State<ShadowDemo> {
+  var _image = NetworkImage('https://placebear.com/300/300');
+
+  var _opacity = 1.0;
+  var _xOffset = 0.0;
+  var _yOffset = 0.0;
+  var _blurRadius = 0.0;
+  var _spreadRadius = 0.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        Center(
+          child:
+          Container(
+            decoration: BoxDecoration(
+              color: Color(0xFF0099EE),
+              boxShadow: [
+                BoxShadow(
+                  color: Color.fromRGBO(0, 0, 0, _opacity),
+                  offset: Offset(_xOffset, _yOffset),
+                  blurRadius: _blurRadius,
+                  spreadRadius: _spreadRadius,
+                )
+              ],
+            ),
+            child: Image(image:_image, width: 100, height: 100,),
+          ),
+        ),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 80.0),
+            child: Column(
+              children: <Widget>[
+                Spacer(),
+                Slider(
+                  value: _opacity,
+                  min: 0.0,
+                  max: 1.0,
+                  onChanged: (newValue) =>
+                  {
+                    setState(() => _opacity = newValue)
+                  },
+                ),
+                Slider(
+                  value: _xOffset,
+                  min: -100,
+                  max: 100,
+                  onChanged: (newValue) =>
+                  {
+                    setState(() => _xOffset = newValue)
+                  },
+                ),
+                Slider(
+                  value: _yOffset,
+                  min: -100,
+                  max: 100,
+                  onChanged: (newValue) =>
+                  {
+                    setState(() => _yOffset = newValue)
+                  },
+                ),
+                Slider(
+                  value: _blurRadius,
+                  min: 0,
+                  max: 100,
+                  onChanged: (newValue) =>
+                  {
+                    setState(() => _blurRadius = newValue)
+                  },
+                ),
+                Slider(
+                  value: _spreadRadius,
+                  min: 0,
+                  max: 100,
+                  onChanged: (newValue) =>
+                  {
+                    setState(() => _spreadRadius = newValue)
+                  },
+                ),
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+}
+
+-------------------------------
+Adding custom icons to flutter
+-------------------------------
+Here we can use the site fluttericons.com
+we upload our svg file that gets converted
+into an icon,
+
+then we download it which contains a 
+dart file, a .ttf file and a config.json file
+
+1. A fonts folder with a TTF file with the name of 
+the class you chose
+2. A config.json file that's used to remember what 
+icons you chose
+3. A dart class with the name of the class you chose
+
+a sample of the content of the dart file is
+
+import 'package:flutter/widgets.dart';
+
+class CustomIcons {
+  CustomIcons._();
+
+  static const _kFontFam = 'CustomIcons';
+  static const String? _kFontPkg = null;
+
+  static const IconData pill = IconData(0xea60, 
+    fontFamily: _kFontFam, fontPackage: _kFontPkg);
+}
+
+Add the following to your pubspec.yaml file:
+
+fonts:
+      - family: CustomIcons //should be the same as _KFontFam
+        fonts:
+          - asset: fonts/CustomIcons.ttf
+          
+then you can use it in your project thus Icon(CustomIcons.pill)
+
+or Icon({_kFontFam}.variableName)
+
+--------------------------------------------
+Adding new text theme to flutter app
+--------------------------------------------
+first download the ttf file
+
+"fonts.google.com"
+
+copy it to the /fonts directory
+
+then in pubspec.yaml add it
+
+- family: Poppins
+      fonts:
+        - asset: fonts/poppins/Poppins-Regular.ttf
+        
+        
+then we can use it in flutter
+
+Text(
+    style: TextStyle(
+        fontFamilty: "Poppins"
+        ))
+        
+then uninstall and install the app
+
+--------------------------
+Gestures in flutter
+---------------------------
+
+The gesture system in Flutter has two separate 
+layers. 
+
+The first layer has raw pointer events that describe the 
+location and movement of pointers 
+(for example, touches, mice, and styli) across the screen. 
+The second layer has gestures that describe semantic 
+actions that consist of one or more pointer movements.
+
+Pointers
+
+Pointers represent raw data about the user’s interaction 
+with the device’s screen. There are four types of pointer 
+events:
+
+PointerDownEvent
+The pointer has contacted the screen at a particular location.
+
+PointerMoveEvent
+The pointer has moved from one location on the screen to another.
+
+PointerUpEvent
+The pointer has stopped contacting the screen.
+
+PointerCancelEvent
+Input from this pointer is no longer directed towards this app. 
+
+Gestures
+
+Gestures represent semantic actions 
+(for example, tap, drag, and scale) that are recognized 
+from multiple individual pointer events, potentially even 
+multiple individual pointers. Gestures can dispatch multiple 
+events, corresponding to the lifecycle of the gesture 
+(for example, drag start, drag update, and drag end):
+
+Tap
+
+onTapDown
+A pointer that might cause a tap has contacted the 
+screen at a particular location.
+
+onTapUp
+A pointer that will trigger a tap has stopped contacting 
+the screen at a particular location.
+
+onTap
+The pointer that previously triggered the onTapDown has 
+also triggered onTapUp which ends up causing a tap.
+
+onTapCancel
+The pointer that previously triggered the onTapDown will 
+not end up causing a tap.
+
+Double tap
+
+onDoubleTap
+The user has tapped the screen at the same location twice 
+in quick succession.
+
+Long press
+
+onLongPress
+A pointer has remained in contact with the screen at the 
+same location for a long period of time.
+
+Vertical drag
+
+onVerticalDragStart
+A pointer has contacted the screen and might begin to move 
+vertically.
+
+onVerticalDragUpdate
+A pointer that is in contact with the screen and moving 
+vertically has moved in the vertical direction.
+
+onVerticalDragEnd
+A pointer that was previously in contact with the 
+screen and moving vertically is no longer in contact 
+with the screen and was moving at a specific velocity when 
+it stopped contacting the screen.
+
+Horizontal drag
+
+onHorizontalDragStart
+A pointer has contacted the screen and might begin to 
+move horizontally.
+
+onHorizontalDragUpdate
+A pointer that is in contact with the screen and moving 
+horizontally has moved in the horizontal direction.
+
+onHorizontalDragEnd
+A pointer that was previously in contact with the screen 
+and moving horizontally is no longer in contact with the
+screen and was moving at a specific velocity when it stopped 
+contacting the screen.
+
+Pan
+
+onPanStart
+A pointer has contacted the screen and might begin to move 
+horizontally or vertically. This callback causes a crash if 
+onHorizontalDragStart or onVerticalDragStart is set.
+
+onPanUpdate
+A pointer that is in contact with the screen and is moving 
+in the vertical or horizontal direction. This callback 
+causes a crash if onHorizontalDragUpdate or onVerticalDragUpdate 
+is set.
+
+onPanEnd
+A pointer that was previously in contact with screen is 
+no longer in contact with the screen and is moving at a 
+specific velocity when it stopped contacting the screen. 
+This callback causes a crash if onHorizontalDragEnd or 
+onVerticalDragEnd is set. 
+
+Gesture Detector
+
+gesture widget have HitTestBehavior , which
+controls how the gesture behaves during a hit test.
+
+deferToChild: Passes the touch event down the widget tree. 
+This is the default behavior for GestureDetector.
+
+opaque: Prevents widgets in the background from receiving touch 
+events.
+
+translucent: Allows widgets in the background to receive touch 
+events.
+
+
+
+----------------------------------------------------
+Fetching movies info from Tmdb (The movie database) 
+and using the API
+-----------------------------------------------------
+
+getting all the details about a movie
+
+https://api.themoviedb.org/3/movie/157336?api_key={api_key}
+			&append_to_response=videos
+
+https://api.themoviedb.org/3/movie/157336?api_key={api_key}
+			&append_to_response=videos,images
+			
+
+https://api.themoviedb.org/3/movie/{movie_id}
+			?api_key=<<api_key>>&language=en-US
+
+
+Get the images that belong to a movie::
+
+Querying images with a language parameter will filter 
+the results. If you want to include a fallback language 
+(especially useful for backdrops) you can use the 
+include_image_language parameter. This should be a comma 
+seperated value like so: include_image_language=en,null.
+
+https://api.themoviedb.org/3/movie/{movie_id}/images
+			?api_key=<<api_key>>&language=en-US
+
+we can then user flutter DIO to get the json data			
+Dio().get("https://url.topi.json");			
+
+
+---------------------------------------------
+Passing data between named Navigation Pages
+--------------------------------------------
+
+
+---------------------------------------------
+What is widget flutter binding
+---------------------------------------------
+
+WidgetFlutterBinding is used to interact with the 
+Flutter engine. Firebase.initializeApp() needs to call 
+native code to initialize Firebase, and since the plugin 
+needs to use platform channels to call the native code, 
+which is done asynchronously therefore you have to call 
+ensureInitialized() to make sure that you have an instance 
+of the WidgetsBinding.
+
+WidgetsFlutterBinding.ensureInitialized() Returns an 
+instance of the WidgetsBinding, creating and initializing 
+it if necessary. If one is created, it will be a 
+WidgetsFlutterBinding. If one was previously initialized, 
+then it will at least implement WidgetsBinding.
+
+You only need to call this method if you need the binding 
+to be initialized before calling runApp.
+
+
+------------------------
+TabBar Widget
+-------------------------
+import 'package:flutter/material.dart';
+
+void main() => runApp(const MyApp());
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  static const String _title = 'Flutter Code Sample';
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      title: _title,
+      home: MyStatelessWidget(),
+    );
+  }
+}
+
+class MyStatelessWidget extends StatelessWidget {
+  const MyStatelessWidget({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      initialIndex: 1,
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('TabBar Widget'),
+          bottom: const TabBar(
+            tabs: <Widget>[
+              Tab(
+                icon: Icon(Icons.cloud_outlined),
+              ),
+              Tab(
+                icon: Icon(Icons.beach_access_sharp),
+              ),
+              Tab(
+                icon: Icon(Icons.brightness_5_sharp),
+              ),
+            ],
+          ),
+        ),
+        body: const TabBarView(
+          children: <Widget>[
+            Center(
+              child: Text("It's cloudy here"),
+            ),
+            Center(
+              child: Text("It's rainy here"),
+            ),
+            Center(
+              child: Text("It's sunny here"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
+import 'package:flutter/material.dart';
+
+void main() => runApp(const MyApp());
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  static const String _title = 'Flutter Code Sample';
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      title: _title,
+      home: MyStatefulWidget(),
+    );
+  }
+}
+
+class MyStatefulWidget extends StatefulWidget {
+  const MyStatefulWidget({Key? key}) : super(key: key);
+
+  @override
+  State<MyStatefulWidget> createState() => _MyStatefulWidgetState();
+}
+
+/// AnimationControllers can be created with `vsync: this` 
+// because of TickerProviderStateMixin.
+
+class _MyStatefulWidgetState extends State<MyStatefulWidget>
+    with TickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('TabBar Widget'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const <Widget>[
+            Tab(
+              icon: Icon(Icons.cloud_outlined),
+            ),
+            Tab(
+              icon: Icon(Icons.beach_access_sharp),
+            ),
+            Tab(
+              icon: Icon(Icons.brightness_5_sharp),
+            ),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: const <Widget>[
+          Center(
+            child: Text("It's cloudy here"),
+          ),
+          Center(
+            child: Text("It's rainy here"),
+          ),
+          Center(
+            child: Text("It's sunny here"),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+-----------------------
+DatePicker Widget
+-----------------------
+
+Date picker::
+
+_selectDate(BuildContext context) async {
+  final DateTime picked = await showDatePicker(
+    context: context,
+    initialDate: selectedDate, // Refer step 1
+    firstDate: DateTime(2000),
+    lastDate: DateTime(2025),
+  );
+  if (picked != null && picked != selectedDate)
+    setState(() {
+      selectedDate = picked;
+    });
+}
+
+How to show the Text input box instead of the calendar::
+
+showDatePicker(
+  context: context,
+  initialDate: selectedDate,
+  firstDate: DateTime(2000),
+  lastDate: DateTime(2025),
+  initialEntryMode: DatePickerEntryMode.input,
+)
+
+How to show the year’s list first::
+
+showDatePicker(
+  context: context,
+  initialDate: selectedDate,
+  firstDate: DateTime(2000),
+  lastDate: DateTime(2025),
+  initialDatePickerMode: DatePickerMode.year,
+)
+
+How to get the number of days in a month::
+
+DateUtils.getDaysInMonth(today.year, today.month)
+
+
+---------------------------
+Carousel slider widget
+---------------------------
+
+this lets you create a carousel ::
+
+CarouselSlider(
+  options: CarouselOptions(height: 400.0),
+  items: [1,2,3,4,5].map((i) {
+    return Builder(
+      builder: (BuildContext context) {
+        return Container(
+          width: MediaQuery.of(context).size.width,
+          margin: EdgeInsets.symmetric(horizontal: 5.0),
+          decoration: BoxDecoration(
+            color: Colors.amber
+          ),
+          child: Text('text $i', style: TextStyle(fontSize: 16.0),)
+        );
+      },
+    );
+  }).toList(),
+)
+
+
+CarouselSlider(
+   items: items,
+   options: CarouselOptions(
+      height: 400,
+      aspectRatio: 16/9,
+      viewportFraction: 0.8,
+      initialPage: 0,
+      enableInfiniteScroll: true,
+      reverse: false,
+      autoPlay: true,
+      autoPlayInterval: Duration(seconds: 3),
+      autoPlayAnimationDuration: Duration(milliseconds: 800),
+      autoPlayCurve: Curves.fastOutSlowIn,
+      enlargeCenterPage: true,
+      onPageChanged: callbackFunction,
+      scrollDirection: Axis.horizontal,
+   )
+ )
+ 
+Build item widgets on demand :: 
+
+This method will save memory by building items once it becomes 
+necessary. This way they won't be built if they're not currently 
+meant to be visible on screen. It can be used to build different 
+child item widgets related to content or by item index.
+
+
+CarouselSlider.builder(
+  itemCount: 15,
+  itemBuilder: (BuildContext context, int itemIndex, int pageViewIndex) =>
+    Container(
+      child: Text(itemIndex.toString()),
+    ),
+)
+
+  
+-------------------------------------
+Draggable Scrollable Sheet widget
+-------------------------------------
+
+This creates a bar that can be dragged from the bottom
+
+Scaffold {
+  body: Stack(
+    children: [
+      Container(
+        decoration: BoxDecoration(
+          backgroundImage: Image.asset("images/image.png"),
+        )
+      ),
+      
+      DraggableScrollableSheet(
+        minChildSize: 0.5,
+        initialChildSize: 0.5,
+        build: (ctx,cont) { 
+          return ListView.builder(
+            controller: cont,
+            itemCount: 20,
+            builder: (ctx,index) {
+              return ListTile()
+            }
+          )
+        }
+
+      )
+    ]
+    )
+  )
+)
+
+
+---------------------------
+State Management
+---------------------------
+
+Provider::
+
+class Products with ChangeNotifier {
+    List<Product> _items = [];
+    
+    
+    List<Product> get items {
+        return [..._items];
+    }
+    
+    void addProduct(){
+        _items.add(value);
+        //notify all listening widget that 
+        // the parent has changed.
+        notifyListeners(); 
+    }
+}
+
+setting up the notifier using ChangeNotifierProvider::
+
+when using this method we set up this notifier
+at the top widget that has access to all the 
+widgets.
+
+in MyApp 
+
+Widget build(BuildContext context){
+    return ChangeNotifierProvider(
+        // for the builder we return an instance
+        // of the provided class.
+        create: (ctx) => Products,  
+        ....
+        
+Getting the data in the childern::
+
+final productsData = Provider.of<Products>(context);
+final products = productsData.items;
+
+Consumer ::
+
+Consumer<Product>(
+    builder: (ctx,products,child) => IconButton(
+        label: child
+        ...)
+    child: Text("Never changes")
+    
+Multiple Providers ::
+
+MultiProvider(
+    providers: [
+        ChangeNotifierProvider.value(
+            value: Products();
+        )
+    ],
+    child: MaterialApp(
+    .....
+    
+    
+/***** To active the notifyListener class you 
+    must call it through the provider class!!!!
+    must 
+    *********/
+
+----------------------------
+Databases
+----------------------------
+
+:::::Sql:::::
+
+How to create a database and table ::
+
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+
+
+void createDatabaseAndTables(String userName) async {
+  //create the database and required tables
+
+  WidgetsFlutterBinding.ensureInitialized();
+  final database = openDatabase(join(await getDatabasesPath(), userName),
+      onCreate: (db, version) {
+    return db.execute(
+        'CREATE TABLE transactions (id INTEGER PRIMARY KEY 
+        AUTOINCREMENT NOT NULL,amount INTEGER NOT NULL,
+        methodOfPayment TEXT NOT NULL,date TEXT NOT NULL, 
+        description TEXT NOT NULL,currency TEXT NOT NULL,
+        category TEXT NOT NULL)');
+  });
+}
+
+How to insert records into the database ::
+
+void insertToTable(String tableName, String databaseName, dynamic obj) async {
+  //insert records into the given table and database
+
+  final db = await openDatabase(join(await getDatabasesPath(), databaseName));
+  await db.insert(tableName, obj.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace);
+}
+
+or
+
+await db.transaction(
+    (txn) async {
+      int id = await txn.rawInsert(
+          'INSERT INTO $tableName(amount,methodOfPayment,date,description,currency,category) VALUES (?,?,?,?,?,?)',
+          [
+            obj.amount,
+            obj.methodOfPayment,
+            obj.date,
+            obj.description,
+            obj.currency,
+            obj.category
+          ]);
+    },
+    // exclusive:
+  );
+
+How to check if a database exists ::
+
+void checkDatabaseExists() async {
+    if (await databaseExists(join(await getDatabasesPath(), 'sirius'))) {
+      //do nothing
+    } else {
+      createDatabaseAndTables('sirius');
+    }
+  }
+  
+How to update records in a table::
+
+Future<int> update(Todo todo) async {
+    return await db.update(tableTodo, todo.toMap(),
+        where: '$columnId = ?', whereArgs: [todo.id]);
+}
+
+OR
+
+// Update some record
+int count = await database.rawUpdate(
+    'UPDATE Test SET name = ?, value = ? WHERE name = ?',
+    ['updated name', '9876', 'some name']);
+print('updated: $count');
+
+
+How to check get records from a table::
+
+count = await database.rawQuery('SELECT COUNT(*) FROM Test')
+
+or 
+
+List<Map<String, Object?>> records = await db.query('my_table');
+
+How to delete records from the database ::
+
+count = await database
+    .rawDelete('DELETE FROM Test WHERE name = ?', ['another name']);
+    
+    or
+    
+await db.delete(tableTodo, where: '$columnId = ?', whereArgs: [id]);
+
+Transaction ::
+
+await database.transaction((txn) async {
+  // Ok
+  await txn.execute('CREATE TABLE Test1 (id INTEGER PRIMARY KEY)');
+  
+  // DON'T  use the database object in a transaction
+  // this will deadlock!
+  await database.execute('CREATE TABLE Test2 (id INTEGER PRIMARY KEY)');
+});
+
+A transaction is committed if the callback does not throw an error. 
+If an error is thrown, the transaction is cancelled. So to rollback 
+a transaction one way is to throw an exception.
+
+Batch support ::
+
+To avoid ping-pong between dart and native code, you can use Batch:
+
+batch = db.batch();
+batch.insert('Test', {'name': 'item'});
+batch.update('Test', {'name': 'new_item'}, 
+    where: 'name = ?', whereArgs: ['item']);
+batch.delete('Test', where: 'name = ?', whereArgs: ['item']);
+results = await batch.commit();
+
+If you don't care about the result and worry about performance 
+in big batches, you can use:
+
+await batch.commit(noResult: true);
+
+During a transaction, the batch won't be committed 
+until the transaction is committed
+
+await database.transaction((txn) async {
+  var batch = txn.batch();
+  
+  // ...
+  
+  // commit but the actual commit will happen when the 
+  // transaction is committed
+  // however the data is available in this transaction
+  await batch.commit();
+  
+  //  ...
+});
+
+By default a batch stops as soon as it encounters an 
+error (which typically reverts the uncommitted changes). 
+You can ignore errors so that every successfull operation is 
+ran and committed even if one operation fails:
+
+await batch.commit(continueOnError: true);
+
+
+::::::: Firebase ::::::::
+
+How to get the degub signin key ::
+
+cd android && ./gradlew signingReport
+
+
+How to setup firebase in app ::
+
+after setting up the app in firebase
+
+1. in the build.gradle of the app level directory add
+
+apply plugin: 'com.google.gms.google-services' in the apply plugin part
+
+//then add this two in the implementation part
+implementation platform('com.google.firebase:firebase-bom:29.0.3')
+implementation 'com.google.firebase:firebase-analytics'
+
+2. add the following in the root build.gradle file
+
+classpath 'com.google.gms:google-services:4.3.10' // in the dependency part
+
+3. lastly copy the json file to the app directory.
+
+
+Firebase Authentication ::
+
+To begin we first install "firebase core".
+
+A Flutter plugin to use the Firebase Core API, which enables 
+connecting to multiple Firebase apps.
+
+Next, within the main function, ensure WidgetsFlutterBinding 
+is initialized and then initialize Firebase:
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(MyApp());
+}
+
+The DefaultFirebaseOptions.currentPlatform are imported from our 
+generated firebase_options.dart file, which is necessary if we use the 
+command line to generate our firebase app i.e the json file, e.t.c
+
+To signup a user using email and password ::
+
+try {
+    UserCredential userCredential = await FirebaseAuth.instance.createUser
+            withEmailAndPassword("email","password");
+}on FirebaseException catch (e) {
+    if (e.code == "email-address-in-user"){
+        //do something
+    }
+}catch (e) {
+    //do someting
+}
+
+To confirm a users email address ::
+
+user = FirebaseAuth.instance.currentUser;
+if (user != null && !user!.emailVerified) {
+    await user!.sendEmailVerification();
+}
+
+How to sign in with Google ::
+
+final GoogleSignInAccount? _googleUser = await GoogleSignIn().signIn();
+
+final GoogleSignInAuthentication? _googleAuth = await _googleUser?.authentication;
+
+final _credential = GoogleAuthProvider.credential(
+    accessToken: _googleAuth?.accessToken,
+    idToken: _googleAuth?.idToken,
+);
+
+await FirebaseAuth.instance.signInWithCredential(_credential);
+
+How to check if a user is signed in ::
+
+There are 3 methods
+
+1. FirebaseAuth.instance.authStateChanges().listen((...))
+2. FirebaseAuth.instance.idTokenChanges().listen((...))
+3. FirebaseAuth.instance.userChanges().listen((...))
+
+How to change a users password ::
+
+First we have to reauthenticate the user, this can be done using
+a token
+
+AuthCredential credential = await EmailAuthProvider.credential(email: , pass..:)
+await FirebaseAuth.instance.currentUser!.reauthenticateWithCredential(cred);
+
+2. change the password
+await FirebaseAuth.instance.currentUser!.updatePassword("thepassword");
+
+
+:::::::::: Shared Preferences :::::::::::::
+
+How to use shared Preferences ::
+
+final _prefs = await SharedPrefernces.getInstance();
+
+await _prefs.setInt('name',1);
+....setBool
+....setDouble
+....setString
+....setStringList('name',<String>['Earth,'Moon']);
+
+
+read data ::
+
+final int? counter = _prefs.getInt('counter');
+......getString
+....
+
+remove and entry ::
+
+final success = await _prefs.remove('name');
+
+
+--------------------------------------
+Animations
+---------------------------------------
+
+Categories of animations ::
+
+implicit animations
+explicit animations
+
+implicit animations: all the animations are taken care off 
+by flutter all we have to do is input start and end positions.
+
+explicit animations: does not run until we call it, and is
+handled by animation controllers.
+
+
+Types of animations ::
+
+1. Tween animations
+2. Physics based animations.
+
+Tween animations: Short for inbetweening, the beginning and 
+the end is defined, so is the timeline, the curve and the speed
+, the framework just calculated how to move from the 
+beginning to the end.
+
+
+class _AuthCardState extends State<AuthCard>
+  with SingleTickerProviderStateMixin
+
+
+
+@override
+void initState() {
+  super.initState();
+  _controller = AnimationController(
+    vsync: this,
+    duration: Duration(
+      milliseconds: 300,
+    ),
+ );
+ 
+ _heightAnimation = Tween<Size>(
+    begin: Size(double.infinity, 260), 
+    end: Size(double.infinity, 320)).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.fastOutSlowIn,
+    ),
+);
+    
+ _heightAnimation.addListener(() => setState(() {}));
+}
+  
+  
+@override
+void dispose() {
+  // TODO: implement dispose
+  super.dispose();
+  _controller.dispose();
+}
+  
+AnimationController _controller;
+
+_heightAnimation.value.height
+
+Animation<Size> _heightAnimation;
+
+_controller.forward();
+
+_controller.reverse();
+
+
+2. A userful widget to use for animations is AnimatedBuilder
+this helps us make sure the whole widget tree is not rebuilt
+and only a part of the widget tree is rebuilt.
+
+AnimatedBuilder(
+    animation: _heightAnimation,
+    builder: (ctx,child) => Container(
+        height: _heightAnimation.value.height,
+        .....
+        child: child),
+    child: //the wiget that you do not want to rebuild
+),
+
+3. Another useful widget is the AnimationController, with this
+widget we do not need to set up a controller, instead everything
+is built in for us, we just need to setup changes in our
+height, width or padding, and optional curve, duration e.t.c
+options
+
+AnimatedController(
+    duration: Duration(milliseconds: 300),
+    curve: Curves.easeIn,
+    height: _authMode == AuthMode.Signup ? 320 : 260,
+    child: -------
+)
+
+
+Slivers ::
+
+
+CustomScrollView(
+    slivers: <Widget> [
+        SliverAppBar(
+            expandedHeight: 300,
+            pinned: true, //this makes sure our appBar is always visible
+            flexibleSpace: FlexibleSpaceBar(
+                title: Text("Stuff")
+            ),
+            background: Hero(
+                tag: "bid",
+                child: Image..
+            ),
+        ),
+        SliverList(
+            delegate: SliverChildListDelegate(
+                //this tells the sliver how to render the display
+                // and it simply takes a list of things to display
+                [ ] 
+            )
+        ),
+]),
+
+custom route transition ::
+
+class CustomRoute<T> extends MaterialPageRoute<T> {
+    // the dynamic type T is the page that will be handed off to when
+    // flutter is done processing this class.
+    
+    CustomRoute({
+        WidgetBuilder builder,
+        RouteSettings settings,
+    }) : super (
+            builder: builder,
+            settings: settings,
+        );
+        
+    
+    @override
+    Widget buildTransitions(
+        BuildContext context,
+        Animation<Double> animation,
+        Animation<Double> secondaryAnimation,
+        Widget child,
+    ) {
+        if (settings.isInitialRoute) {
+            // if this is the first route of the app, 
+            // in other words are we in the app.
+            return child;
+            // if it is the first page, return the
+            // widget without any animation
+         }
+         return FadeTransition(
+            opacity: animation,
+            child: child,
+        );
+    }
+    
+    now to class this we use the normal navigator
+    
+    Navigator.of(context).pushReplacement(
+        CustomRoute(
+            builder: (ctx) => OrderScreen()
+        )
+    );       
+        
+}
+}
+
+
+we can make all our navigation to use a particular route 
+animation by setting it in the mains MaterialPage
+
+theme: ThemeData(
+    pageTransitionsTheme: pageTransitionsTheme(builders: {
+        TargetPlatform.android: CustomPageTransitionsBuilder,
+        TargetPlatform.iOS: CustomPageTransitionsBuilder,
+       })),
+
+
+class CustomPageTransitionsBuilder extends PageTransitionBuilder {
+
+    @override
+    Widget buildTransitions<T>(
+        PageRoute<T> route,
+        BuildContext context,
+        Animation<Double> animation,
+        Animation<Double> secondaryAnimation,
+        Widget child,
+    ) {
+        if (route.settings.isInitialRoute) {
+            // if this is the first route of the app, 
+            // in other words are we in the app.
+            return child;
+            // if it is the first page, return the
+            // widget without any animation
+         }
+         return FadeTransition(
+            opacity: animation,
+            child: child,
+        );
+    }
+    
+    
+To have a staggard animation, we use the same controller
+but we wrap our Curve option in out tween in an interval
+where the interval is an integer between 0 and 1.
+
+
+----------------------------------
+Granting app Permissions
+----------------------------------
+import "package:permission_handler/permission_handler.dart"
+
+
+
+You can get a Permission's status, which is either 
+granted, denied, restricted or permanentlyDenied.
+
+var status = await Permission.camera.status;
+
+if (status.isDenied) {
+  // We didn't ask for permission yet or the permission 
+  //has been denied before but not permanently.
+}
+
+// You can can also directly ask the permission about its status.
+if (await Permission.location.isRestricted) {
+  // The OS restricts access, for example because of parental controls.
+}
+
+if (await Permission.contacts.request().isGranted) {
+  // Either the permission was already granted before or the user just granted it.
+}
+
+// You can request multiple permissions at once.
+Map<Permission, PermissionStatus> statuses = await [
+  Permission.location,
+  Permission.storage,
+].request();
+print(statuses[Permission.location]);
+
+if (await Permission.speech.isPermanentlyDenied) {
+  // The user opted to never again see the permission request dialog for this
+  // app. The only way to change the permission's status now is to let the
+  // user manually enable it in the system settings.
+  openAppSettings();
+}
+
+On Android, you can show a rationale for using a permission:
+
+bool isShown = await Permission.contacts.shouldShowRequestRationale;
+
+
+Future<bool> checkPermission() async {
+    var _status = await Permission.storage.status;
+
+    if (_status != PermissionStatus.granted) {
+      var _result = await Permission.storage.request();
+
+      if (_result == PermissionStatus.granted) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return true;
+    }
+  }
+  
+  
+---------------------------------------
+Playing Media Files
+--------------------------------------
+
+::::::: Chewie ::::::::::
+
+This is a package in flutter that has all the 
+methods needed to handle videos in it, such
+as play, pause, maximize, minimize e.t.c.
+
+to use this we need Video_player plugin too
+
+so we first of all initialize out video controller
+and chewie controller thus ::
+
+class _PlayVideo State ext....{
+    late VideoPlayerController 
+    late Future<void> _initializeVideoPlayerFuture;
+    late ChewieController _chewieController
+    
+    @override
+    void initState() {
+        _controller = VideoPlayerController.file(File("/media/storage"));
+        _initializeVideoPlayerFuture = _controller.initialize();
+        _chewieController = ChewieController(
+            videoPlayerController: _controller, //access to video player controller
+            autoPlay: false //should the video start playing automatically
+            fullScreenByDefault: false,
+         );
+         super.initState();
+    }
+    
+    //dont forget to dispose of the controllers
+    
+    @override
+    void dispose() {
+        super.dispose();
+        _controller.dispose();
+        _chewieController.dispose();
+    
+    }
+    }
+    
+}
+
+THen in the main it is best to wrap the part for the video in 
+a futureBuilder so we wait till chewie has been initialized before
+we display any UI as such :::
+
+    return FutureBuilder(
+        future: _initializeVideoPlayerFuture,
+        builder: (ctx,snapShot) {
+        
+            return Scaffold(
+                body: SizedBox(
+                    child: Chewie(controller: _chewieController),
+                )
+            
+            );
+        
+        }
+    )

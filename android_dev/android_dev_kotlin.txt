@@ -1,0 +1,177 @@
+Practise questions
+-------------------
+
+
+
+Understanding the Xml Format
+-----------------------------
+
+Look at the tag for the ConstraintLayout, and notice 
+that it says androidx.constraintlayout.widget.ConstraintLayout 
+instead of just ConstraintLayout like the TextView. This 
+is because ConstraintLayout is part of Android Jetpack, 
+which contains libraries of code which offers additional 
+functionality on top of the core Android platform. Jetpack 
+has useful functionality you can take advantage of to make 
+building apps easier. You'll recognize this UI component 
+is part of Jetpack because it starts with "androidx".
+
+
+2. You may have noticed the lines that begin with xmlns:, 
+followed by android, app, and tools.
+
+xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:app="http://schemas.android.com/apk/res-auto"
+xmlns:tools="http://schemas.android.com/tools"
+
+The xmlns stands for XML namespace, and each line defines a 
+schema, or vocabulary for attributes related to those words. 
+The android: namespace, for example, marks attributes that 
+are defined by the Android system. All of the attributes in 
+the layout XML begins with one of those namespaces.
+
+Layout Contraints nameing convention::
+
+The name of the constraints follows the form 
+layout_constraint<Source>_to<Target>Of, where <Source> 
+refers to the current view. <Target> refers to the edge of 
+the target view that the current view is being constrained 
+to, either the parent container or another view.
+
+
+
+Radio Groups and Radio Buttons
+--------------------------------
+
+<RadioGroup
+  android:id="@+id/tip_options"
+  android:layout_width="wrap_content"
+  android:layout_height="wrap_content"
+  android:orientation="vertical"
+  android:checkedButton="@+id/option_twenty_percent"
+  app:layout_constraintTop_toBottomOf="@id/service_question"
+  app:layout_constraintStart_toStartOf="parent"
+>
+
+	<RadioButton
+       android:id="@+id/option_twenty_percent"
+       android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+       android:text="Amazing (20%)" />
+
+     <RadioButton
+       android:id="@+id/option_eighteen_percent"
+      android:layout_width="wrap_content"
+       android:layout_height="wrap_content"
+      android:text="Good (18%)" />
+      
+</RadioGroup>
+
+
+
+Switch
+---------
+
+<Switch
+  	android:id="@+id/round_up_switch"
+ 	android:layout_width="0dp"
+	android:layout_height="wrap_content"
+	android:checked="true" //says it should be checked
+    android:text="@string/round_up_tip"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="@id/tip_options"
+    app:layout_constraintTop_toBottomOf="@id/tip_options" />
+
+
+Constraint Layouts
+--------------------
+Note: You cannot use match_parent for any view in a 
+ConstraintLayout. Instead use 0dp, which means match constraints.
+
+
+String resources
+-----------------
+Its is the file in res/values/strings.xml
+
+<resources>
+	<string name="app_name">Tip Calculator</String>
+	<string name="good"> Good Tip </String>
+</resources>
+
+@string/good
+
+
+View binding
+--------------
+Our code needs to find a reference to a View like a Button 
+or TextView before your code can call methods on the View or 
+access its attributes. The Android framework provides a method, 
+findViewById(), that does exactly what you need—given the ID of a 
+View, return a reference to it. This approach works, but as 
+you add more views to your app and the UI becomes more complex, 
+using findViewById() can become cumbersome.
+
+Initialize the binding object::
+
+In earlier codelabs, you saw the onCreate() method in 
+the MainActivity class. It's one of the first things 
+called when your app starts and the MainActivity is 
+initialized. Instead of calling findViewById() for each 
+View in your app, you'll create and initialize a binding object 
+once.
+
+class MainActivity : AppCompatActivity() {
+
+    lateinit var binding: ActivityMainBinding
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+    }
+}
+
+Set the content view of the activity. Instead of passing 
+the resource ID of the layout, R.layout.activity_main, this
+specifies the root of the hierarchy of views in your app, binding.root.
+
+setContentView(binding.root)
+
+
+Now when you need a reference to a View in your app, you 
+can get it from the binding object instead of calling 
+findViewById(). The binding object automatically defines 
+references for every View in your app that has an ID.
+
+// Old way with findViewById()
+val myButton: Button = findViewById(R.id.my_button)
+myButton.text = "A button"
+
+// Better way with view binding
+val myButton: Button = binding.myButton
+myButton.text = "A button"
+
+// Best way with view binding and no extra variable
+binding.myButton.text = "A button"
+
+
+The name of the binding class is generated by converting 
+the name of the XML file to Pascal case and adding the 
+word "Binding" to the end. Similarly, the reference for 
+each view is generated by removing underscores and 
+converting the view name to camel case. For example, 
+in Pascal case activity_main.xml becomes ActivityMainBinding, 
+and you can access @id/text_view as binding.textView.
+
+Learn about null::
+Calling toDouble() on a string that is empty or a string 
+that doesn't represent a valid decimal number doesn't work. 
+Fortunately Kotlin also provides a method called toDoubleOrNull() 
+which handles these problems. It returns a decimal number if it 
+can, or it returns null if there's a problem.
+
+val cost = stringInTextField.toDoubleOrNull()
+
+if (cost == null) {
+    return
+}
