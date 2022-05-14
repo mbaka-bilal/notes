@@ -13,7 +13,7 @@ An async task is a Dart event loop
 jumping between different parts of your 
 program (processing events) as needed.
 
-What is an isolate?
+What is an isolate
 
 Dart programs run in an isolate by default.
 
