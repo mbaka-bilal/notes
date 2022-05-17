@@ -1,5 +1,24 @@
 Practise questions
 -------------------
+1. How do you indentify UI components that
+	are part of android JetPack.
+2. What is xmlns.
+3. Create radio buttons, where one of them
+	is selected by default.
+4. Create a switch button that is selected
+	by default.
+5. Create a string resource and use it in
+	you code.
+6. What is Binding and how do you use it.
+7. How do you check which radio button has 
+	been checked.
+8. How do you get the default currency settings 
+	in phone and format a text accordingly.
+9. How do you replace a hint text.
+10. Explain the format of hexadecimal colors,
+	and what is ARGB?.
+11. How do you set dark theme?.
+
 
 
 
@@ -39,7 +58,7 @@ the target view that the current view is being constrained
 to, either the parent container or another view.
 
 
-
+--------------------------------
 Radio Groups and Radio Buttons
 --------------------------------
 
@@ -68,7 +87,7 @@ Radio Groups and Radio Buttons
 </RadioGroup>
 
 
-
+---------
 Switch
 ---------
 
@@ -83,26 +102,31 @@ Switch
     app:layout_constraintTop_toBottomOf="@id/tip_options" />
 
 
+----------------------
 Constraint Layouts
 --------------------
 Note: You cannot use match_parent for any view in a 
 ConstraintLayout. Instead use 0dp, which means match constraints.
 
 
+------------------
 String resources
 -----------------
 Its is the file in res/values/strings.xml
 
 <resources>
 	<string name="app_name">Tip Calculator</String>
-	<string name="good"> Good Tip </String>
+	<string name="good">Good Tip</String>
 </resources>
 
 @string/good
 
+/* Note: make sure there is not white spaces */
 
+--------------
 View binding
 --------------
+
 Our code needs to find a reference to a View like a Button 
 or TextView before your code can call methods on the View or 
 access its attributes. The Android framework provides a method, 
@@ -119,6 +143,16 @@ called when your app starts and the MainActivity is
 initialized. Instead of calling findViewById() for each 
 View in your app, you'll create and initialize a binding object 
 once.
+
+
+in build.gradle file
+-----------------------
+
+buildFeatures {
+	viewBinding true
+}
+
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -175,3 +209,164 @@ val cost = stringInTextField.toDoubleOrNull()
 if (cost == null) {
     return
 }
+
+:: when ::
+
+val tipPercentage = when (binding.tipOptions.checkedRadioButtonId) {
+   R.id.option_twenty_percent -> 0.20
+   R.id.option_eighteen_percent -> 0.18
+   else -> 0.15
+}
+
+:: Replace a hint ::
+
+binding.tipResult.text = getString(R.string.tip_amount,formattedTip)
+
+
+----------------------------
+Number Format
+----------------------------
+
+NumberFormat.getCurrencyInstance(); 
+	//get the default currency settings in phone
+
+val formattedTip = NumberFormat.getCurrencyInstance().format(tip); 
+	//format to the correct currency
+
+
+
+-----------------------------------------
+17 MAY 2022
+Change the App Theme
+------------------------------------------
+
+A Color can be represented as 3 hexadecimal numbers, 
+#00-#FF (0-255), representing the red, green, and blue 
+(RGB) components of that color. The higher the number, the more 
+of that component there is.
+
+Note that a color can also be defined including an alpha 
+value #00-#FF, which represents the transparency 
+(#00 = 0% = fully transparent, #FF = 100% = fully opaque). 
+When included, the alpha value is the first of 4 hexadecimal 
+numbers (ARGB). If an alpha value is not included, it is assumed to 
+be #FF = 100% opaque.
+
+Themes ::
+A theme is a collection of styles that's applied to an 
+entire app, activity, or view hierarchy—not just an individual 
+View. When you apply a theme to an app, activity, view, or view group, 
+the theme is applied to that element and all of its children. Themes 
+can also apply styles to non-view elements, such as the status bar and 
+window background.
+
+Learn about theme colors :::::::
+
+To help you use color in a meaningful way in your app, 
+and apply it consistently throughout, the theme system groups 
+colors into 12 named attributes related to color to be used 
+by text, icons, and more. 
+
+
+#
+
+Name
+
+Theme Attribute
+
+1
+
+Primary
+
+colorPrimary
+
+2
+
+Primary Variant
+
+colorPrimaryVariant
+
+3
+
+Secondary
+
+colorSecondary
+
+4
+
+Secondary Variant
+
+colorSecondaryVariant
+
+5
+
+Background
+
+colorBackground
+
+6
+
+Surface
+
+colorSurface
+
+7
+
+Error
+
+colorError
+
+8
+
+On Primary
+
+colorOnPrimary
+
+9
+
+On Secondary
+
+colorOnSecondary
+
+10
+
+On Background
+
+colorOnBackground
+
+11
+
+On Surface
+
+colorOnSurface
+
+12
+
+On Error
+
+colorOnError
+
+Note that line of XML also specifies a parent theme, 
+Theme.MaterialComponents.DayNight.DarkActionBar. DayNight 
+is a predefined theme in the Material Components library. 
+DarkActionBar means that the action bar uses a dark color. 
+Just as a class inherits attributes from its parent class, 
+a theme inherits attributes from its parent theme.
+Note: Theme color attributes that aren't defined in a theme 
+will use the color from the parent theme.
+
+Dark theme :::::::::::
+
+Colors for a dark theme still need to be readable. 
+Dark themes use a dark surface color, with limited color 
+accents. To help ensure readability, the primary colors are 
+usually less saturated versions of the primary colors for the 
+light theme.
+
+To provide more flexibility and usability in a dark theme, 
+it's recommended to use lighter tones (200-50) in a dark 
+theme, rather than your default color theme 
+(saturated tones ranging from 900-500). Earlier you picked 
+green 200 and light blue 200 as light colors. For your app, 
+you'll use the light colors as the main colors, and the primary 
+colors as the variants

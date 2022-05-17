@@ -1,5 +1,27 @@
 Practise Questions
 -------------------
+1. What are flutter isolates?.
+2. What is the difference between
+	async and a flutter isolate?.
+3. List and explain the two ways
+	of creating a flutter isolate.	
+4. How do you send and receive messages
+	between Isolates?.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 Flutter Isolates
@@ -336,6 +358,8 @@ RotatedBox(
    child: ... )
    
 Where each turn represents 90 degrees::
+
+How to make a drop down button::
 
 DropdownButton(
   value: currentValue,
@@ -791,7 +815,8 @@ layers.
 
 The first layer has raw pointer events that describe the 
 location and movement of pointers 
-(for example, touches, mice, and styli) across the screen. 
+(for example, touches, mice, and styli) across the screen.
+ 
 The second layer has gestures that describe semantic 
 actions that consist of one or more pointer movements.
 
@@ -1942,3 +1967,16 @@ we display any UI as such :::
         
         }
     )
+    
+    
+--------------------------------
+Flutter didChangeDependencies
+--------------------------------
+didChangeDependencies is called just a few moments 
+after the state loads its dependencies and context is available 
+at this moment so here you can use context.
+
+didChangeDependencies() Called when a dependency of this [State] 
+object changes.
+
+
