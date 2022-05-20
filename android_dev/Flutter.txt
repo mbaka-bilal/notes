@@ -7,6 +7,8 @@ Practise Questions
 	of creating a flutter isolate.	
 4. How do you send and receive messages
 	between Isolates?.
+5. How do you add custom icons and new
+	textThemes to your app?.
 
 
 

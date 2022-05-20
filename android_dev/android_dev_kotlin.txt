@@ -370,3 +370,157 @@ theme, rather than your default color theme
 green 200 and light blue 200 as light colors. For your app, 
 you'll use the light colors as the main colors, and the primary 
 colors as the variants
+
+Primary colors map to components and elements, like app bars 
+and buttons. Secondary colors are most often used as accents 
+on components, such as FABS and selection controls.
+
+Surface, background, and error colors
+
+Surface, background, and error colors typically don’t represent 
+brand. In general, they occupy the following areas of the UI: 
+The elements in an app use...
+
+Surface, background, and error colors typically don’t represent 
+brand.
+
+In general, they occupy the following areas of the UI:
+
+Surface colors map to components such as cards, sheets, and 
+menus
+Background color is found behind scrollable content
+Error color indicates errors in components, such as text 
+fields.
+
+“On” colors :::::
+
+The elements in an app use colors from specific categories 
+in your color palette, such as a primary color. Whenever other 
+screen elements, such as text or icons, appear in front of 
+surfaces using those colors, those elements should use colors 
+specifically designed to appear clearly and legibly against the 
+colors behind them.
+
+This category of colors is called “on” colors, referring to the 
+fact that they color elements that are sometimes placed “on” top 
+of key surfaces that use a primary color, secondary color, surface 
+color, background color, or error color. These are labelled using 
+the original category name (such as primary color) with the prefix 
+“on”.
+
+“On” color naming :::::
+
+1. Category	"On" category
+2. Primary	On Primary
+3. Secondary	On Secondary
+4. Surface	On Surface
+5. Background	On Background
+6. Error	On Error
+
+
+----------------------------------
+Changing the app Icon
+----------------------------------
+Android platform introduced support for adaptive 
+icons (as of API level 26). By implementing an adaptive icon for 
+your app, your app will be able to accommodate a large range of 
+devices by displaying a high-quality app icon appropriately.
+
+Launcher Icons :::::::
+
+The goal is for your launcher icon to look fantastic 
+(crisp and clear) regardless of the device model or screen density. 
+Specifically, screen pixel density refers to how many pixels per 
+inch (or dpi, dots per inch) are on the screen. For a medium-density 
+device (mdpi), there are 160 dots per inch on the screen while an 
+extra-extra-extra-high-density device (xxxhdpi) has 640 dots per inch
+on the screen.
+
+Navigate to the resources directory (app > src > main > res) and 
+expand out some of the mipmap folders. These mipmap folders are where 
+you should put the launcher icon assets for your Android app.
+
+mdpi, hdpi, xhdpi, etc.. are density qualifiers that you can append 
+onto the name of a resource directory (like mipmap) to indicate that 
+these are resources for devices of a certain screen density. Here's a 
+list of density qualifiers on Android:
+
+mdpi - resources for medium-density screens (~160 dpi)
+hdpi - resources for high-density screens (~240 dpi)
+xhdpi - resources for extra-high-density screens (~320 dpi)
+xxhdpi - resources for extra-extra-high-density screens (~480dpi)
+xxxhdpi - resources for extra-extra-extra-high-density screens (~640dpi)
+nodpi - resources that are not meant to be scaled, regardless of the 
+	screen's pixel density
+anydpi - resources that scale to any density
+
+Note: You may wonder why launcher icon assets are located in mipmap 
+directories separate from other app assets located in drawable 
+directories. This is because some launchers may display your app 
+icon at a larger size than what's provided by the device's default 
+density bucket. For example, on a hdpi device, a certain device 
+launcher may want to use the xhdpi version of the app icon instead.
+
+If you scale down a bitmap image, it will probably look okay because 
+you are getting rid of pixel information. If you scale up a bitmap 
+image significantly, it may appear blurry because Android will need 
+to guess at and fill in the missing pixel information.
+
+Note: To avoid a blurry app icon, be sure to provide different bitmap 
+images of an app icon for each density bucket (mdpi, hdpi, xhdpi, etc...) 
+Note that device screen densities won't be precisely 160dpi, 240dpi, 
+320dpi, etc... Based on the current screen density, Android will 
+select the resource at the closest larger density bucket and then 
+scale down.
+
+Adaptive Icons :::::
+
+As of the Android 8.0 release (API level 26), there is support for 
+adaptive launcher icons, which allows for more flexibility and 
+interesting visual effects when it comes to app icons. For developers, 
+that means that your app icon is made up of two layers: a foreground and 
+a background layer.
+
+Adaptive icons were added in API level 26 of the platform, so the 
+adaptive icons should be declared in a mipmap resource directory that 
+has the -v26 resource qualifier on it. That means the resources in 
+this directory will only be applied on devices that are running API 26 
+(Android 8.0) or higher. The resource files in this directory are ignored 
+on devices running older versions of the platform.
+
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
+
+These are both vector drawable files. They don't have a fixed size in 
+pixels.
+
+A bitmap image doesn't understand much about the image that it holds, 
+except for the color information at each pixel. On the other hand, a 
+vector graphic knows how to draw the shapes that define an image. These 
+instructions are composed of a set of points, lines, and curves along 
+with color information. The advantage is that a vector graphic can be 
+scaled for any canvas size for any screen density, without losing quality.
+
+A vector drawable is Android's implementation of vector graphics, 
+intended to be flexible enough on mobile devices. You can define 
+them in XML with these possible elements. Instead of providing 
+versions of a bitmap asset for all density buckets, you only need to 
+define the image once. Thus, reducing the size of your app and making 
+it easier to maintain.
+
+Note: there are tradeoffs to using a vector drawable versus a bitmap 
+image. For example, icons can be ideal as vector drawables because they 
+are made up of simple shapes, while a photograph would be harder to 
+describe as a series of shapes. It would be more efficient to use a 
+bitmap asset in that case.
+
+
+Because the edges of your icon could get clipped depending on the 
+shape of the mask from the device manufacturer, it's important to put 
+the key information of your icon in a " safe zone" which is a circle of 
+diameter 66 dp in the center of the layer. The content outside of that 
+safe zone should not be essential (e.g. background color) where it's okay 
+if it gets clipped.
