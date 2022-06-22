@@ -152,6 +152,29 @@ Future createIsolate() async {
  log("MIKE'S RESPONSE: ==== $mikeResponse");
 }
 
+void heavyComputationTask(SendPort mySendPort) async {
+ /// Set up a receiver port for Mike
+ ReceivePort mikeReceivePort = ReceivePort();
+
+ /// Send Mike receivePort sendPort via mySendPort
+ mySendPort.send(mikeReceivePort.sendPort);
+
+ /// Listen to messages sent to Mike's receive port
+ await for (var message in mikeReceivePort) {
+   if (message is List) {
+     final myMessage = message[0];
+     final coffeeType = message[1];
+     log(myMessage);
+
+     /// Get Mike's response sendPort
+     final SendPort mikeResponseSendPort = message[2];
+
+     /// Send Mike's response via mikeResponseSendPort
+     mikeResponseSendPort.send("You're taking $coffeeType, and I'm taking Latte");
+   }
+ }
+}
+
 Create a new isolate using compute()::
 
 compute<Q, R>() accepts two generic types: Q is the isolate 
@@ -186,28 +209,7 @@ final int multiplier;
 }
 
 
-void heavyComputationTask(SendPort mySendPort) async {
- /// Set up a receiver port for Mike
- ReceivePort mikeReceivePort = ReceivePort();
 
- /// Send Mike receivePort sendPort via mySendPort
- mySendPort.send(mikeReceivePort.sendPort);
-
- /// Listen to messages sent to Mike's receive port
- await for (var message in mikeReceivePort) {
-   if (message is List) {
-     final myMessage = message[0];
-     final coffeeType = message[1];
-     log(myMessage);
-
-     /// Get Mike's response sendPort
-     final SendPort mikeResponseSendPort = message[2];
-
-     /// Send Mike's response via mikeResponseSendPort
-     mikeResponseSendPort.send("You're taking $coffeeType, and I'm taking Latte");
-   }
- }
-}
 
 To kill an isolate manually, use isolate.kill(). 
 To pause an isolate, use isolate.pause(). To 
@@ -278,7 +280,7 @@ of the message — O(n) in big O notation. However, when you
 send the data using Isolate.exit(), then the memory that 
 holds the message in the exiting isolate isn’t copied, but 
 instead is transferred to the receiving isolate. That transfer 
-is quick and completes in constant time — O(1).
+is quick and completes in 	constant time — O(1).
 
 Sending multiple messages between isolates::
 
@@ -978,6 +980,10 @@ https://api.themoviedb.org/3/movie/{movie_id}/images
 
 we can then user flutter DIO to get the json data			
 Dio().get("https://url.topi.json");			
+
+Downloading the images and saving them locally ::::
+
+
 
 
 ---------------------------------------------
@@ -1982,3 +1988,321 @@ didChangeDependencies() Called when a dependency of this [State]
 object changes.
 
 
+------------------------------------------------
+Reading and writing to device storage
+------------------------------------------------
+We first check for read and write permission
+
+On Android
+1. Edit the andriodManifest .xml and add the following
+
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
+Using the permission_handler plugin.
+
+try {
+      if (await Permission.storage.status.isGranted) {
+        status = true;
+      } else {
+        try {
+          var result = await Permission.storage.request();
+          // print ("the reuls of the requeist is $result");
+          if (result == PermissionStatus.granted) {
+            status = true;
+          } else if (result == PermissionStatus.permanentlyDenied) {
+            openAppSettings();
+          } else {
+            checkPermission();
+          }
+        } catch (e) {
+          print("error granting permsission $e");
+          checkPermission();
+        }
+      }
+    } catch (e) {
+      print("error checking premission status $e");
+      status = false;
+    }
+
+
+
+Then use path_provider to get the path to various parts of the
+data storage for the app.
+
+Temporary directory
+A temporary directory (cache) that the system can clear at any time. 
+On iOS, this corresponds to the NSCachesDirectory. On Android, this 
+is the value that getCacheDir() returns.
+
+Documents directory
+A directory for the app to store files that only it can access. 
+The system clears the directory only when the app is deleted. On 
+iOS, this corresponds to the NSDocumentDirectory. On Android, this 
+is the AppData directory.
+
+Future<String> get _localPath async {
+  final directory = await getApplicationDocumentsDirectory();
+
+  return directory.path;
+}
+
+Future<File> get _localFile async {
+    final path = await _localPath;
+    return File('$path/counter.txt');
+  }
+  
+
+Write data to the file::::
+
+Future<File> writeCounter(int counter) async {
+  final file = await _localFile;
+
+  // Write the file
+  return file.writeAsString('$counter');
+}
+
+Read data from the file:::::
+
+Future<int> readCounter() async {
+  try {
+    final file = await _localFile;
+
+    // Read the file
+    final contents = await file.readAsString();
+
+    return int.parse(contents);
+  } catch (e) {
+    // If encountering an error, return 0
+    return 0;
+  }
+}
+
+
+
+Using Storage Access FrameWork
+---------------------------------
+
+using [shared_storage plugin]
+
+URIs, URLs, and URNs ::::::
+
+A URI is a uniform resource identifier while a URL is a 
+uniform resource locator. Hence every URL is a URI, abstractly 
+speaking, but not every URI is a URL. This is because there is 
+another subcategory of URIs, uniform resource names (URNs), which 
+name resources but do not specify how to locate them. The mailto, 
+news, and isbn URIs shown above are examples of URNs.
+
+Permission over an Uri :::::
+
+To operate (read, delete, update, create) a file or folder 
+within a directory, you need first to request permission of the 
+user. These permissions are represented as UriPermission. 
+
+to do that we use 
+
+List<saf.UriPermission>? persistedPermissionUris;
+    Uri whatsAppUri = Uri.parse(
+        'content://com.android.externalstorage.documents/tree/primary%3AAndroid%2Fmedia%2Fcom.whatsapp%2FWhatsApp%2FMedia%2F.Statuses');
+
+    persistedPermissionUris = await saf.persistedUriPermissions();
+
+    if (!(await saf.isPersistedUri(whatsAppUri))) {
+      final Uri? grantedUri =
+          await saf.openDocumentTree(initialUri: whatsAppUri);
+    }
+    
+How to check if we have read permission on a uri::::
+
+if (await saf.canRead(uri) ?? true){
+
+     }else{
+       await saf.openDocumentTree(initialUri: uri);
+     }
+     
+How to read all files in the current Uri::::
+final saf.DocumentFile? documentFileOfMyGrantedUri =
+    await uri.toDocumentFile();
+    final Stream<saf.PartialDocumentFile> onNewFileLoaded =
+    documentFileOfMyGrantedUri!.listFiles(columns);
+    await for (var element in onNewFileLoaded) {
+      files.add(element);
+    }
+    
+-----------    
+17-06-22
+----------
+
+ColorScheme class 
+-------------------
+
+A set of 25 colors based on the Material spec that
+can be used to configure the color properties of most 
+components.
+
+The main accent color groups in the scheme are 
+primary, secondary, and tertiary.
+
+    Primary colors are used for key components 
+    across the UI, such as the FAB, prominent buttons, 
+    and active states.
+
+    Secondary colors are used for less prominent 
+    components in the UI, such as filter chips, 
+    while expanding the opportunity for color expression.
+
+    Tertiary colors are used for contrasting accents that 
+    can be used to balance primary and secondary colors or 
+    bring heightened attention to an element, such as an 
+    input field. The tertiary colors are left for makers 
+    to use at their discretion and are intended to support 
+    broader color expression in products.
+
+-----------
+19-06-22
+-----------
+primarySwatch is not a Color. It's MaterialColor. Which 
+means it's different shades of a color a material app will use.
+
+primaryColor is one of those shades. To be exact, 
+primaryColor is normally equal to primarySwatch[500].
+
+It is usually better to define a primarySwatch instead of 
+primaryColor. Because some material components may use a different 
+shade of the primaryColor for things such as shadow, border.
+
+MaterialColor:::::
+Defines a single color as well a color swatch with ten shades 
+of the color.
+
+The color's shades are referred to by index. The greater the 
+index, the darker the color. There are 10 valid indices: 
+50, 100, 200, ..., 900. The value of this color should the 
+same the value of index 500 and shade500.
+
+to convert any color to material color we can use the code
+
+primarySwatch: const MaterialColor(0xFF0071BC, {
+   50: Color.fromRGBO(0, 113, 188, .1),
+   100: Color.fromRGBO(0, 113, 188, .2),
+   200: Color.fromRGBO(0, 113, 188, .3),
+   300: Color.fromRGBO(0, 113, 188, .4),
+   400: Color.fromRGBO(0, 113, 188, .5),
+   500: Color.fromRGBO(0, 113, 188, .6),
+   600: Color.fromRGBO(0, 113, 188, .7),
+   700: Color.fromRGBO(0, 113, 188, .8),
+   800: Color.fromRGBO(0, 113, 188, .9),
+   900: Color.fromRGBO(0, 113, 188, 1),
+}),
+
+
+21-06-22
+---------
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+void main() => runApp(const MyApp());
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  static const String _title = 'Flutter Code Sample';
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      title: _title,
+      home: MyStatefulWidget(),
+    );
+  }
+}
+
+class MyStatefulWidget extends StatefulWidget {
+  const MyStatefulWidget({Key? key}) : super(key: key);
+
+  @override
+  State<MyStatefulWidget> createState() => _MyStatefulWidgetState();
+}
+
+class _MyStatefulWidgetState extends State<MyStatefulWidget> {
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      child: Center(
+        child: Shortcuts(
+          shortcuts: const <ShortcutActivator, Intent>{
+            // Pressing space in the field will now move to the next field.
+            SingleActivator(LogicalKeyboardKey.space): NextFocusIntent(),
+          },
+          child: FocusTraversalGroup(
+            child: Form(
+              autovalidateMode: AutovalidateMode.always,
+              onChanged: () {
+                Form.of(primaryFocus!.context!)!.save();
+              },
+              child: Wrap(
+                children: List<Widget>.generate(5, (int index) {
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints.tight(const Size(200, 50)),
+                      child: TextFormField(
+                        onSaved: (String? value) {
+                          debugPrint(
+                              'Value for field $index saved as "$value"');
+                        },
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+----------------------------------
+Navigator 2.0
+----------------------------------
+Navigator 2.0 includes the following key components:
+• Page: An abstract class that describes the configuration for a route.
+• Router: Handles configuring the list of pages the Navigator displays.
+• RouterDelegate: defines how the router listens for changes to the app 
+	state to rebuild the navigator’s configuration.
+• RouteInformationProvider: Provides RouteInformation to the router.
+• RouteInformationParser: Parses route information into a user-defined data type.
+• BackButtonDispatcher: Reports presses on the platform system’s Back button to
+the router.
+• TransitionDelegate: Decides how pages transition into and out of the screen.
+
+
+
+---------
+22-06-22
+---------
+How to make a button really sit at the bottom of the screen
+
+Column(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+	  Text('User Inputs....'),
+          ElevatedButton.icon(
+            style: ButtonStyle(
+              elevation: MaterialStateProperty.all(0),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap
+            ),
+            onPressed: () {
+              Navigator.of(context).pushNamed(AddPlaceScreen.routeName);
+            },
+            icon: Icon(Icons.add),
+            label: Text('Add Place'),
+
+	 ),
+  ],
+),

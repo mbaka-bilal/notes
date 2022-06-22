@@ -524,3 +524,96 @@ the key information of your icon in a " safe zone" which is a circle of
 diameter 66 dp in the center of the layer. The content outside of that 
 safe zone should not be essential (e.g. background color) where it's okay 
 if it gets clipped.
+
+Move vector drawable files into -v26 directory :::::::::::
+
+Depending on the min SDK of your app, you may notice that the background 
+asset is located in the drawable-v24 folder, while the foreground asset 
+is in the drawable folder. The reason is because the background asset 
+contains a gradient, which was available starting in the Android 7.0 
+release (also known as API version 24, hence the -v24 resource qualifier). 
+The foreground asset doesn't contain a gradient, so that can go in the base 
+drawable folder.
+
+Instead of having the foreground and background assets in two separate 
+drawable folders, move both vector drawable files into a -v26 resource 
+directory. Since these assets are only used for adaptive icons, these 
+two drawables are only needed on API 26 and above. This folder structure 
+will make it easier to find and manage your adaptive icon files.
+
+drawable-anydpi-v26
+   ic_launcher_background.xml
+   ic_launcher_foreground.xml
+mipmap-anydpi-v26
+   ic_launcher.xml
+   ic_launcher_round.xml
+   
+Vector drawables are Android's implementation of vector graphics. 
+They are defined in XML as a set of points, lines, and curves along with 
+associated color information. Vector drawables can be scaled for any 
+density without loss of quality.
+
+
+7 june 2022
+------------
+To use material design component is different from normal components
+
+<com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/round_up_switch"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:checked="true"
+        android:text="Round up tip?"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/tip_options"
+        app:layout_constraintTop_toBottomOf="@id/tip_options"
+        />
+        
+<com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/cost_of_service"
+        android:layout_width="160dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:hint="@string/cost_of_service">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/cost_of_service_edit_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            />
+
+    </com.google.android.material.textfield.TextInputLayout>
+    
+    
+Icons
+-------
+
+Vector drawables are represented as XML files that store the instructions 
+on how to create an image rather than saving the actual pixels that make up 
+that image. Vector drawables can be scaled up or down without any loss of 
+visual quality or increase in file size.
+
+To make your app work on these older versions of Android 
+(known as backwards compatibility), add the vectorDrawables element to 
+your app's build.gradle file. This enables you to use vector drawables 
+on versions of the platform less than API 21, versus converting to PNGs 
+when the project is built. See more details here.
+
+app/build.gradle
+
+
+android {
+  defaultConfig {
+    ...
+    vectorDrawables.useSupportLibrary = true
+   }
+   ...
+}
+
+
+-------------------------------------------------------------------
+17 June 2022 (Android Apprentice)
+--------------------------------------------------------------------
+
