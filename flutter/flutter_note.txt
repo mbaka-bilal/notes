@@ -1,0 +1,65 @@
+Appendix
+---------
+
+Displaying based on different orientations
+---------------------------------------------
+1. Orientation Builder (https://docs.flutter.dev/cookbook/design/orientation#:~:text=To%20determine%20the%20app's%20current,size%20of%20the%20parent%20changes.)
+
+The OrientationBuilder calculates the current Orientation 
+by comparing the width and height available to the parent 
+widget, and rebuilds when the size of the parent changes.
+
+OrientationBuilder(
+   builder: (context,orientation) {
+   	if (orientation == Orientation.potrait){
+   	
+   	}
+   	if (orientation == Orientation.landscape){
+   	
+   	}		
+   }
+)
+
+2. MediaQuery
+
+If you’re interested in the orientation of the screen, 
+rather than the amount of space available to the parent, 
+the it is best to use MediaQuery.of(context).orientation instead of 
+an OrientationBuilder widget.
+
+
+-----------------------------------------
+Running code in background
+----------------------------------------
+1. Using compute
+
+Compute makes running background isolate easier because we don't have to
+manually create SendPort and RecievePort our self.
+
+The function must be a top level function
+
+Compute(Function,parameters);
+
+1.1 Fix for BackgroundIsolateBinaryMessenger
+
+
+In the fix for it we get the instance of the current ui in the button
+
+final token = RootIsolateToken.instance.
+
+The token for the root isolate that is executing this Dart code. If 
+this Dart code is not executing on a root isolate instance will be null.
+
+A token that represents the root isolate, used for coordinating with background isolates.
+
+This property is primarily intended for use with BackgroundIsolateBinaryMessenger.ensureInitialized, 
+which takes a RootIsolateToken as its argument. The value null is returned 
+when executed from background isolates.
+
+//Then pass the token to the function to run in the compute then in the
+// Compute function
+
+BackgroundIsolateBinaryMessenger.ensureInitialized(token);
+
+
+

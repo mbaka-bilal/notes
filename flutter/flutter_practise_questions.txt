@@ -1,0 +1,33 @@
+State management
+-----------------
+1. What is a state source?.
+2. How do you create a cubit with initial value and 
+	emit a state.
+3. Create a countdown timer cubit.
+4. How can you listen to the stream of a cubit.
+5. How can you observe all changes for a given cubit.
+6. How can you observe all changes that occured in bloc,
+	across all blocs in one place.
+7. How can you handle error in a given cubit.
+8. How can you handle error across all blocs in one place.
+
+
+-----------------------------
+Facial and touch recognition
+-----------------------------
+1. How do you use local_auth.
+2. How do you enable biometrics only.
+
+----------------------------
+Storing data locally
+----------------------------
+1. How do you store encypted data locally.
+2. How do you read encypted data locally.
+
+
+-------------
+Appendix
+-------------
+1. How do you use a singleChildScrollView with a column.
+	i. Centering, spacing, or aligning fixed-height content.
+	

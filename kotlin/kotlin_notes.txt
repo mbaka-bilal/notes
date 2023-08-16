@@ -1,0 +1,757 @@
+
+------------------
+Kotlin platforms
+-------------------
+
+Kotlin was born to be compiled down to Java
+Virtual Machine bytecode.
+
+The Java Virtual Machine (JVM) is a virtual machine 
+that provides an environment in which Java bytecode can be 
+executed. It interprets compiled Java code and translates it 
+into machine code that can be executed by the underlying hardware. 
+This makes Java code platform-independent, meaning that it can run 
+on any machine that has a JVM installed. The JVM is also responsible 
+for managing the memory and other resources used by Java applications, 
+and providing other features such as garbage collection, security, and 
+debugging tools.	
+
+
+-------------
+Chapter 1
+Introduction
+-------------
+
+Instead of compiling to native machine code on each platform, 
+Java programs are compiled into a format called bytecode. The 
+bytecode runs inside an application on the Java Virtual Machine. 
+The JVM can be thought of as a layer above your actual machine.
+By running as bytecode on a virtual machine, you are able to share 
+Java code and applications across many types of computer systems.
+
+
+fun main(args: Array<String>) {
+	println("Hello, kitty")
+}
+
+Gradle is a build system and dependency management tool that is 
+popular within the Java ecosystem. It’s an extremely powerful and 
+versatile build tool, and its power goes well beyond our purposes 
+in the book. Gradle is used as the build system for Android
+apps built using Android Studio, which, as was mentioned earlier, 
+is based on IntelliJ IDEA.
+
+
+------------------------------------
+Chapter 2
+Expressions, Variables & Constants
+------------------------------------
+
+printing out using a format specifier:
+println("%.0f".format(28.0 % 10.0))
+
+2.1 constants
+---------------
+val number: Int = 10
+
+assigns a constant variable called number that cannot be reassigned.
+
+------------------------------------
+Chapter 3
+Types and operations
+------------------------------------
+
+3.1 Multiline string
+----------------------
+
+let bigString = """
+|You can have a string
+|that contains multiple
+|lines
+|by
+|doing this.
+""".trimMargin()
+
+The leading pipe prevents the string from having leading space.
+
+3.2 Pair and Triples
+----------------------
+
+Pair or Triple are types that represent data composed of two 
+or three values of any type. If you want to have more than three 
+values, you use what Kotlin calls a data class,
+
+val coordinates: Pair<Int,Int> = Pair(2,3)
+or
+val coordinates = 2 to 3
+
+to access the data
+
+coordinates.first
+coordinates.second
+
+Triples work the same way as pair
+
+val triples = Triple(2,3,1)
+
+we could also access this values easily as so
+
+val (x1,y1,z1) = triples
+
+and if we wanted to ignore one of the triples
+
+val (x1,y1,_) = triples
+
+3.3 Any, Unit and Nothing Types
+----------------------------------
+
+Any is used to represent any type except from null
+
+val anyType: Any = 3
+
+Unit is a special type which only ever represents one 
+value: the Unit object. It is similar to the void type in 
+Java, except it makes working with generics easier.
+
+Every function which does not explicitly return a type, 
+e.g., a String, returns Unit.
+
+Nothing is a type that is helpful for declaring that a 
+function not only doesn't return anything, but also never completes.
+
+
+------------------------------------
+Chapter 4
+Functions
+------------------------------------
+
+The basic format is 
+
+fun functionName(Parameters) {
+	//body
+}
+
+fun multipy(first: Int, second: Int) {
+	println("$first * $second = ${first * second}")
+}
+
+you can also give default values to parameters
+
+fun multiply(first: Int, second: Int = 1){
+	println("$first * $second = ${first * second}")
+}
+
+Sometimes it is helpful to use named arguments when 
+calling a function to make it easier to understand the 
+purpose of each argument.
+
+printMultipleOf(multiplier = 4, andValue = 2)
+
+
+4.1 return
+------------
+Functions can return multiple values 
+
+fun multiplyAndDivide(number: Int, factor: Int): Pair<Int, Int> {
+	return Pair(number * factor, number / factor)
+}
+
+val (product, quotient) = multiplyAndDivide(4, 2)
+
+If a function consists solely of a single expression, you can 
+assign the expression to the function using = while at the 
+same time not using braces, a return type, or a return
+statement:
+
+fun multiplyInferred(number: Int, multiplier: Int) = number * multiplier
+
+4.2 Functions as variables
+---------------------------
+Consider the following function
+
+fun add(a: Int, b: Int): Int {
+	return a + b
+}
+
+You can assign this function to a variable using the method 
+reference operator, :: ,
+like so:
+
+var function = ::add
+
+Now you can use the function variable in just the same 
+way you’d use add , like so:
+
+function(4, 2)
+
+The fact that you can assign functions to variables comes in 
+handy because it means you can pass functions to other functions. 
+Here’s an example of this in action:
+
+fun printResult(function: (Int, Int) -> Int, a: Int, b: Int) {
+	val result = function(a, b)
+	print(result)
+}
+
+printResult(::add, 4, 2)
+
+4.3 No return
+--------------
+Kotlin has a way to tell the compiler that a function is known 
+to never return. You set the return type of the function to 
+the Nothing type, indicating that nothing is ever
+returned from the function. A crude, but honest, implementation 
+of a function that wouldn’t return would be as follows:
+
+fun infiniteLoop(): Nothing {
+	while (true) {
+	
+	}
+}
+
+
+------------------------
+Chapter 5
+Nullability
+------------------------
+
+A valid value that represents a special condition, such as the 
+absence of a value, is known as a sentinel value.
+
+You declare a variable of a nullable type by using the following syntax:
+
+var errorCode: Int?
+
+5.1 Not null assertion operator
+---------------------------------
+val ageAfterBirthday = authorAge!! + 1
+println("After their next birthday, author will be $ageAfterBirthday")
+
+The double-exclamation mark after the variable name tells 
+the compiler that you want to look inside the box and take 
+out the value. The result is a value of the non-null type.
+This means ageAfterBirthday is of type Int , not Int?.
+
+5.2 Safe calls
+---------------
+val nameLength = authorName?.length
+println("Author's name has length $nameLength.")
+// > Author's name has length 10.
+
+By using the safe call operator, you’re able to access the length property.
+Safe calls can be chained:
+val nameLengthPlus5 = authorName?.length?.plus(5)
+
+5.3 The let() function
+------------------------
+authorName?.let {
+	nonNullAbleauthorName = authorName
+}
+
+5.4 Elvis Operator
+-------------------
+Used to give a default value if the value is null.
+
+var mustHaveResult = nullableInt ?: 0
+
+The previous code using the Elvis operator is equivalent to the 
+following use of a null check and smart cast, but is more concise:
+	var nullableInt: Int? = 10
+	var mustHaveResult = if (nullableInt != null) nullableInt else 0
+Set the nullableInt to null , like so:
+	nullableInt = null
+	mustHaveResult = nullableInt ?: 0
+Now mustHaveResult equals 0 .
+
+------------------------
+Chapter 6
+Arrays and Lists
+------------------------
+6.1 Creating arrays
+-----------------------
+The easiest way to create an array is
+
+	val evenNumbers = arrayOf(2,4,6,8)
+	
+To create an array with all its values set to a default value use
+	
+	val fiveFives = Array(5,{5})
+	
+6.2 Array of primitive types
+-----------------------------
+you can create an array of odd numbers as follows:
+	val oddNumbers = intArrayOf(1, 3, 5, 7)
+
+When running Kotlin on the JVM, the oddNumbers array is compiled 
+to a Java array of type int[] .
+Other standard library functions include floatArrayOf() , doubleArrayOf(), 
+and booleanArrayOf() . These various functions create arrays of type 
+IntArray , FloatArray , DoubleArray , etc. You can also pass a number 
+into the constructor for these types, for example, to create an array of zeros.
+	val zeros = DoubleArray(4) // 0.0, 0.0, 0.0, 0.0
+
+You can convert between the boxed and primitive arrays using functions like
+toIntArray() .
+
+	val otherOddNumbers = arrayOf(1, 3, 5, 7).toIntArray()
+
+The type of otherOddNumbers is IntArray and not Array<Int> .
+
+6.3 Lists
+-----------
+Lists can grow in size.
+
+6.3.1 Creating lists
+----------------------
+val innerPlanets = listOf("mercury","venus")
+val innerPlanetsArrayList = arrayListOf("mercury","venus")
+val emptyList: List<String> = listOf()
+
+these lists are imutable
+
+6.3.2 Multable lists
+----------------------
+val outerPlantes = mutableListOf("jupiter","venus")
+val exoPlanets = mutableListOf<String>()
+
+6.3.3 Iterating through the values
+-----------------------------------
+If you need the index of each element, you can iterate over the 
+return value of the list’s withIndex() method, which can be 
+destructed to each element’s index and value:
+
+	for ((index, player) in players.withIndex()) {
+		println("${index + 1}. $player")
+	}
+	// > 1. Alice
+	// > 2. Anna
+	// > 3. Bob
+	// > 4. Dan
+	// > 5. Franklin
+	
+6.3.4 Nullability and collection types
+---------------------------------------
+A nullable list can be created as follows:
+	var nullableList: List<Int>? = listOf(1, 2, 3, 4)
+
+The individual elements are of type Int and cannot be null, but 
+the list itself can be null.
+	nullableList = null
+	
+On the other hand, you can create a list with elements that are 
+nullable by shifting nullability to the type argument:
+
+	var listOfNullables: List<Int?> = listOf(1, 2, null, 4)
+If you try to set the list itself to null, you’ll get a compiler error.
+	
+	listOfNullables = null // Error: Null can not be a value of a non-null type
+
+You can go to the extreme with nullability by letting both the list and 
+its elements be null.
+	
+	var nullableListOfNullables: List<Int?>? = listOf(1, 2, null, 4)
+	nullableListOfNullables = null
+	
+------------------
+Chapter 7
+Maps and Sets
+------------------
+
+7.1 Maps
+---------
+All keys have to be of the same type, and all values have to be of the 
+same type.
+
+7.1.1 Creating maps
+--------------------
+var yearOfBirth = mapOf("Anna" to 1990, "Brian" to 1991, "Craig" to 1992,
+"Donna" to 1993)
+
+The mapOf() function returns an immutable map of fixed size.
+
+var namesAndScores = mutableMapOf("Anna" to 2, "Brian" to 2, "Craig" to
+8, "Donna" to 6)
+
+You can pass in no arguments to the standard library functions to create an empty map
+like so:
+
+	namesAndScores = mutableMapOf()
+...or create a new empty map by calling a map constructor:
+
+	var pairs = HashMap<String, Int>()
+	
+When you create a map, you can define its capacity:
+	
+	pairs = HashMap<String, Int>(20)
+	
+
+7.2 Sets
+----------
+
+7.2.1 Creating sets
+---------------------
+	val names = setOf("Anna", "Brian", "Craig", "Anna")
+You can create an empty set by calling a constructor:
+	val hashSet = HashSet<Int>()
+	
+7.2.2 Sets from arrays
+-----------------------
+	val someArray = arrayOf(1, 2, 3, 1)
+	
+You can create a set from this array by passing the array into 
+a standard library set function and using the spread operator *:
+
+	var someSet = mutableSetOf(*someArray)
+
+
+-------------------------
+Chapter 8
+Lambdas
+--------------------------
+Kotlin has another object you can use to break up code into reusable 
+chunks: A lambda. These have many uses, and become particularly useful 
+when dealing with collections such as an array or map.	
+
+Lambdas are also known as anonymous functions, closure e.t.c.
+
+Closures are so named because they have the ability to “close over” the variables 
+and constants within the closure’s own scope. This simply means that a lambda can 
+access,store and manipulate the value of any variable or constant from the surrounding
+context, acting as a nested function.
+
+Declaration of a variable that can hold a lambda:
+
+var multiplyLambda: (Int, Int) -> Int
+
+You assign a lambda to a variable like so:
+
+multiplyLambda = { a: Int, b: Int -> Int
+	a * b
+}
+
+Then you can use it like any other function:
+
+val lambdaResult = multiplyLambda(4, 2) // 8
+
+8.1 Shorthand syntax
+----------------------
+
+First, you can use Kotlin’s type inference to shorten the syntax
+by removing the type information:
+
+multiplyLambda = { a, b ->
+	a * b
+}
+
+8.1.1 it keyword
+-----------------
+For a lambda that has only one parameter, you can shorten it even 
+further using the it keyword:
+
+var doubleLambda = { a: Int ->
+	2 * a
+}
+
+Since there is only one parameter and the lambda type is now specified, 
+the lambda can be shortened to:
+
+doubleLambda = { 2 * it }
+
+val square: (Int) -> Int = { it * it }
+
+8.2 Lambdas as arguments
+--------------------------
+
+fun operateOnNumbers(a: Int, b: Int, operation: (Int, Int) -> Int): Int {
+	val result = operation(a, b)
+	println(result)
+	return result
+}
+
+You can then use operateOnNumbers with a lambda, like so:
+
+val addLambda = { a: Int, b: Int ->
+	a + b
+}
+
+operateOnNumbers(4, 2, operation = addLambda) // 6
+
+
+you can also pass in a function as the third parameter of operateOnNumbers, 
+like so:
+
+fun addFunction(a: Int, b:Int) = a + b 
+
+operateOnNumbers(4, 2, operation = ::addFunction)
+
+
+8.3 Trailing lambda syntax.
+----------------------------
+
+operateOnNumbers(4, 2) { a, b ->
+	a + b
+}
+
+you’ve removed the operation label and pulled the braces outside of the 
+function call parameter list.
+
+8.4 Lambdas with no meaningful return value
+--------------------------------------------
+
+A lambda will always return the value of its last expression, so here is 
+how you define a lambda that takes no parameters and returns only the 
+Unit object:
+
+var unitLambda: () -> Unit = {
+	println("Kotlin Apprentice is awesome!")
+}
+
+unitLambda()
+
+/////////
+
+var counter = 0
+val incrementCounter = {
+	counter += 1
+}
+
+/////////
+
+If you literally want the lambda to not return a value, you must use 
+the Nothing type, like so:
+
+var nothingLambda: () -> Nothing = { throw NullPointerException() }
+
+Since an exception is thrown, the lambda does not actually return a value.
+
+
+
+-------------------------
+Chapter 9
+Classes
+-------------------------
+
+class Person(var firstName: String, var lastName: String) {
+	val fullName;
+	get() = "$firstName $lastName";
+}
+
+to create an instance of a class
+
+val john = Person(firstName = "Johnny", lastName = "Appleseed")
+
+
+9.1 The heap vs. the stack
+----------------------------
+
+When you create a reference type such as a class, the system stores 
+the actual instance in a region of memory known as the heap. References 
+to the class instances are stored in a region of memory called the stack, 
+unless the reference is part of a class instance, in which case the reference 
+is stored on the heap with the rest of the class instance.
+
+9.2 Object identity
+--------------------
+
+In Kotlin, the === operator lets you check if the identity of one object 
+is equal to the identity of another:
+	john === homeOwner // true
+	
+Just as the == operator checks if two values are equal, the === identity operator
+compares the memory address of two references. It tells you whether the value of 
+the references are the same; that is, they point to the same block of data on the 
+heap.
+
+Using the == operator with the instances compares the values in the objects using the
+equals() function, whereas === compares the identity of the references.
+
+9.3 Data classes
+-----------------
+
+
+class Student(var firstName: String, var lastName: String, var id: Int){
+	
+	override fun hashCode(): Int {
+		val prime = 31
+		var result = 1
+		result = prime * result + firstName.hashCode()
+		result = prime * result + id
+		result = prime * result + lastName.hashCode()
+	
+		return result
+	}
+
+	override fun equals(other: Any?): Boolean {
+		if (this === other)
+			return true
+
+		if (other == null)
+			return false
+
+		if (javaClass != other.javaClass)
+			return false
+
+		val obj = other as Student?
+
+		if (firstName != obj?.firstName)
+			return false
+
+		if (id != obj.id)
+			return false
+
+		if (lastName != obj.lastName)
+			return false
+			
+		return true
+	}
+	
+	override fun toString(): String {
+		return "Student (firstName=$firstName, lastName=$lastName, id=$id)"
+	}
+
+	fun copy(firstName: String = this.firstName, lastName: String = this.lastName,
+				id: Int = this.id)
+		= Student(firstName, lastName, id)
+}
+
+These actions on instances are so common that Kotlin provides a variation on classes
+named data classes.
+
+data class StudentData(var firstName: String, var lastName: String, var
+					id: Int)	 	
+
+
+9.4 Destructuring declarations
+-------------------------------
+val (firstName, lastName, id) = marie
+
+
+-------------------------------
+Chapter 10
+Objects
+-------------------------------
+Kotlin uses object to denote a custom type for which only a single instance can be
+created.
+
+In discussing your code, you'll often have to rely on the context to determine whether
+an "object" is a class instance, the single instance of an entity created using object or an
+anonymous object.
+
+10.1 Named objects
+--------------------
+The object keyword in Kotlin lets you define a type that only has a single instance — a
+named object.
+
+
+Object X {
+	var x = 0;
+}
+
+The java decration for this is
+
+public final class X {
+	private static int x;
+	public static final X INSTANCE;
+	
+	public final int getX() {
+		return x;
+	}	
+
+	public final void setX(int var1) {
+		x = var1;
+	}
+	
+	static {
+		X var0 = new X();
+		INSTANCE = var0;
+	}
+}
+
+10.2 Using static members
+--------------------------
+
+The static keyword is used in these other languages to denote a class member that is
+common to all instances of the class and is not specific to each instance. Static
+members remove the need to duplicate items that are common to all instances.
+
+Kotlin used Companion objects to create static members.
+
+10.3 Creating companion objects
+---------------------------------
+You create the companion object by prepending companion to an object defined in the
+class: 
+
+class Scientist private constructor(
+	val id: Int,
+	val firstName: String,
+	val lastName: String) {
+		
+	companion object {
+		var currentId = 0
+		
+		fun newScientist(firstName: String, lastName: String): Scientist {
+			currentId += 1
+			return Scientist(currentId, firstName, lastName)
+		}
+	}
+
+
+	var fullName = "$firstName $lastName"
+}
+
+In the Scientist class, you've added a companion object that holds a currentId value
+that you'll use for generating unique ID numbers for each scientist. The currentId
+value is common to all instances of the class, and it is used by the class to create new ID
+values when a new scientist instance is created.
+
+A common use case for static members is to implement the factory pattern for creating
+new class instances. You're using the factory pattern in Scientist by making the class
+primary constructor private and adding a factory method newScientist() to the
+companion object, which creates new scientist instances. By making the constructor
+private, you enforce that the new scientist instances can only be created using the
+factory method.
+
+You can create a repository of scientists as a singleton:
+
+object ScientistRepository {
+	val allScientists = mutableListOf<Scientist>()
+	
+	fun addScientist(student: Scientist) {
+		allScientists.add(student)
+	}
+
+	fun removeScientist(student: Scientist) {
+		allScientists.remove(student)
+	}
+	
+	fun listAllScientists() {
+		allScientists.forEach {
+			println("${it.id}: ${it.fullName}")
+		}
+	}	
+}
+
+You create new scientist instances using dot syntax to call the companion object
+method on the class name:
+	val emmy = Scientist.newScientist("Emmy", "Noether")
+	val isaac = Scientist.newScientist("Isaac", "Newton")
+	val nick = Scientist.newScientist("Nikola", "Tesla")
+
+	ScientistRepository.addScientist(emmy)
+	ScientistRepository.addScientist(isaac)
+	ScientistRepository.addScientist(nick)
+	ScientistRepository.listAllScientists()
+
+	// 1: Emmy Noether
+	// 2: Isaac Newton
+	// 3: Nikola Tesla
+
+-------------------------
+Appendix
+--------------------------
+1. 
+To read from the command line
+
+val radius = readLine()!!.toDouble()
+
+

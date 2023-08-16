@@ -1,0 +1,4 @@
+-----------
+Functions
+-----------
+1. How can you assign functions to a variable.
