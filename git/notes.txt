@@ -1,0 +1,18 @@
+Git branches
+-------------
+
+Source : https://www.nobledesktop.com/learn/git/git-branches
+
+> git branch //see list of local branches
+> git branch -r //see list of remote branches
+> git branch -a //see all remotes and local branches
+> git checkout -b branch_name //create a branch and checkout
+> git checkout --track origin/my-branch-name //checkout to a remote branch
+> git merge my-branch-name //merge another branch into the current branch
+> git push origin --delete my-branch-name //Delete a remote branch
+> git branch -d my-branch-name //Delete a local branch
+
+The -d option only deletes the branch if it has already been merged. 
+The -D option is a shortcut for --delete --force, which deletes 
+the branch irrespective of its merged status.
+> git branch -D my-branch-name //force delete a local branch

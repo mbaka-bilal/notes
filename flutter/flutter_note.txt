@@ -1,3 +1,426 @@
+
+---------------
+Maps (Topic)
+---------------
+Flutter Google maps
+---------------------
+Fix for google maps flutter which causes the application to crash when popping the map screen
+
+
+final GoogleMapsFlutterPlatform mapsImplementation =
+      GoogleMapsFlutterPlatform.instance;
+  if (mapsImplementation is GoogleMapsFlutterAndroid) {
+    try {
+      await mapsImplementation
+          .initializeWithRenderer(AndroidMapRenderer.latest);
+    } catch (e) {}
+  }
+
+place this in main(), it uses the latest rendering.
+
+How to display google maps in flutter and draw polyline between two points
+---------------------------------------------------------------------------
+
+After setting up your app and the google maps keys.
+
+class MapScreen extends StatefulWidget{
+.....
+class _MapScreenState..... {
+ late GoogleMapController mapController;
+ BitmapDescriptor? myLocationMarker;
+ BitmapDescriptor? secondUserLocationMarker;
+ Map<PolylineId, Polyline> polyLines = {};
+ 
+ @override
+ void initState(){
+  //Get users location
+  WidgetsBinding.instance.addPostFrameCallback((duration) {
+   initializeMarkers();
+  });
+ }
+
+ @override
+ Widget build(BuildContext context){
+  return Scaffold(
+    appBar: AppBar(),
+    body: (location == null) ? Center(child: Text("Loading")) : 
+     GoogleMap(
+      trafficEnabled: true, //To show traffic lines,
+      initialCameraPosition: CameraPosition(
+        target: location, //which is LatLng()
+      ),
+      markers: { //A set of markers
+        if (myLocationMarker != null)
+             Marker(
+               markerId: MarkerId("my_location"),
+               position: mylocation,
+               icon: myLocationMarker!,
+               infoWindow: const InfoWindow(title: "Your Location"),
+               ),
+         if (secondUserLocationMarker != null)
+             Marker(
+               markerId: MarkerId("alarrt_location"),
+               position: LatLng(latitude, longitude),
+               icon: secondUserLocationMarker!,
+               infoWindow: InfoWindow(
+               title: "${widget.firstName} ${widget.lastName}",
+               snippet: widget.address),
+          ),
+      },
+      onMapCreated: (GoogleMapController controller) async {
+         mapController = controller;
+
+         if (appStore.isDarkMode) {
+           await controller.setMapStyle(darkMapStyle);
+         } else {
+           await controller.setMapStyle(lightMapStyle);
+         }
+
+         await Future.delayed(1.seconds, () async {
+            mapController.animateCamera(
+              CameraUpdate.newCameraPosition(CameraPosition(
+              target: provider.currentPosition!,
+              zoom: 7,
+          )));
+         });
+          setState(() {});
+      } ,
+        polylines: Set<Polyline>.of(polyLines.values),
+      )
+    
+  );
+  
+  void initializeMarkers() async {
+    //Create marker for my location
+    // Create a marker using image or widgets, using MarkerIcon package
+    if (myProfilePic == null ||
+        ) {
+
+      myLocationMarker = await MarkerIcon.circleCanvasWithText(
+        text: "${firstName[0].toUpperCase()}"
+            "${lastName[0].toUpperCase()}",
+        size: Size(70, 70),
+        fontSize: 25,
+        circleColor: primaryBlue,
+        fontColor: Colors.white,
+      );
+    } else {
+      myLocationMarker = await MarkerIcon.downloadResizePictureCircle(
+          myprofilePic!,
+          size: 90,
+          addBorder: true,
+          borderSize: 15);
+    }
+
+    //create marker for second location
+    if (widget.profilePic == null ) {
+      alertCreatorLocationMarker = await MarkerIcon.circleCanvasWithText(
+        text: "${widget.firstName[0].toUpperCase()}"
+            "${widget.lastName[0].toUpperCase()}",
+        size: Size(70, 70),
+        fontSize: 25,
+        circleColor: primaryBlue,
+        fontColor: Colors.white,
+      );
+    } else {
+      alertCreatorLocationMarker = await MarkerIcon.downloadResizePictureCircle(
+          widget.profilePic!,
+          size: 90,
+          addBorder: true,
+          borderSize: 15);
+    }
+
+    setState(() {});
+  }
+ }
+
+
+Next to get the polyline we use the directions api from google maps in this api
+you can either use placeID, latitude_longitude, or address, we will be using 
+longitude_latitude but the best is placeID because it has more data packed in it
+so google does not have to make multiple calls to other endpoints thus it is 
+faster.
+
+Here is an example of basic request to get directions, we use the alternatives: true,
+parameters which resturns alternative routes.
+
+Future<NetworkResponse> getDirectionsFromLatLng({
+    required LatLng origin,
+    required LatLng destination,
+  }) async {
+    Uri requestUrl = Uri.parse(
+        "${AppUrl.directionsBaseUrl}?origin=${origin.latitude},${origin
+            .longitude}&"
+            "destination=${destination.latitude},${destination.longitude}&"
+            "alternatives=true&key="
+            "$googleMapsApiKey&sessiontoken=viewAlarrt");
+    try {
+      final response =
+      await http.get(requestUrl).timeout(Duration(seconds: 30));
+      final result = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        final model = DirectionsModel.fromJson(result);
+        return NetworkResponse(status: RequestStatus.success, data: model);
+      } else {
+        return NetworkResponse(
+            status: RequestStatus.failed, data: "Invalid response");
+      }
+    } on TimeoutException catch (e) {
+      debugPrint("request timeout");
+      return NetworkResponse(status: RequestStatus.noNetwork, data: "No network");
+    } on http.ClientException catch (e) {
+      debugPrint("client exception: $e");
+      return NetworkResponse(status: RequestStatus.noNetwork, data: "No network");
+    } catch (e) {
+      debugPrint("Error $e");
+      return NetworkResponse(
+          status: RequestStatus.failed, data: "Unkown error");
+    }
+  }
+
+Then we want to parse the response and update our polyline map
+
+Future<void> getDirections() async {
+    LatLng myLocation = myCurrentPosition;
+    LatLng usersLocation = LatLng(double.tryParse(widget.latitude!)!,
+        double.tryParse(widget.longitude!)!);
+
+    final response = await MapsRepo().getDirectionsFromLatLng(
+      origin: myLocation,
+      destination: usersLocation,
+    );
+
+    if (response.status == RequestStatus.failed) {
+      //TODO show snackbar
+    } else if (response.status == RequestStatus.noNetwork) {
+      //TODO show snackbar
+    } else {
+      //Then it succeeded
+      final data = response.data as DirectionsModel;
+      directionsModel = data;
+      int index = 0;
+
+      for (Routes route in data.routes) {
+        //Loop through all the routes and get the overview
+        //polyline for each.
+        //Then decoded it and get the list of LatLng from it.
+        //Then create a polyline from this list and then save it with
+        //a unique ID in polyLines variable,
+        //Finally calling setState which causes it to render on the map.
+
+        String overviewPolyline = route.overviewPolyline.points;
+
+        final line = decodePolyline(overviewPolyline);  //package:google_polyline_algorithm
+        final id = PolylineId(Random().nextInt(100).toString());
+
+        List<LatLng> coOrdinates =
+            line.map((e) => LatLng(e[0].toDouble(), e[1].toDouble())).toList();
+        Polyline polyline = Polyline(
+          polylineId: id,
+          color: (index == 0) ? primaryBlue : t8_colorPrimary,
+          points: coOrdinates,
+          width: 3,
+        );
+
+        polyLines[id] = polyline;
+        index++;
+      }
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+
+
+--------------------------------------------
+Releasing flutter apps to store (Topic)
+---------------------------------------------
+
+1. Android (Google play store)
+---------------------------------
+
+1. create an upload keystore
+
+keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA \
+          -keysize 2048 -validity 10000 -alias upload
+
+
+2. Reference keystore from the app
+------------------------------------
+Create a file named key.properties in android/key.properties
+
+storePassword=<password-from-previous-step>
+keyPassword=<password-from-previous-step>
+keyAlias=upload
+storeFile=<keystore-file-location>
+
+then edit android/app/build.gradle
+
+add this before the android {} block
+
+  def keystoreProperties = new Properties()
+   def keystorePropertiesFile = rootProject.file('key.properties')
+   if (keystorePropertiesFile.exists()) {
+       keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+   }
+   
+Find the buildTypes block and add this above:
+
+signingConfigs {
+       release {
+           keyAlias keystoreProperties['keyAlias']
+           keyPassword keystoreProperties['keyPassword']
+           storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+           storePassword keystoreProperties['storePassword']
+       }
+   }
+   
+then add signingConfig signingConfigs.release to the 
+
+release{} block so the whole thing becomes 
+
+ buildTypes {
+       release {
+           signingConfig signingConfigs.debug
+           signingConfig signingConfigs.release
+       }
+   }
+   
+your can remove signingConfigs.debug  
+
+
+
+
+-----------------------------
+FIREBASE (TOPIC)
+-----------------------------
+setup
+------
+After you download and setup firebase
+> firebase login
+> dart pub global activate flutterfire_cli
+> flutterfire configure
+
+add firebase_core package then in main.dart
+
+await Firebase.initializeApp(
+  options: DefaultFirebaseOptions.currentPlatform,
+);
+
+
+
+
+
+-------------------------------
+24 august 2023
+Protecting keys (TOPIC)
+-------------------------------
+1. Enviromemt variables
+
+(Flutter_dotenv)
+
+a. create a .env file in root of project
+
+FOO=foo
+BAR=bar
+FOOBAR=$FOO$BAR
+ESCAPED_DOLLAR_SIGN='$1000'
+# This is a comment
+
+b. Add the .env file to your assets bundle in pubspec.yaml
+
+assets:
+  - .env
+  
+c. Load the .env file in main.dart
+
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// DotEnv dotenv = DotEnv() is automatically called during import.
+// If you want to load multiple dotenv files or name your dotenv object differently, 
+// you can do the following and import the singleton into the relavant files:
+// DotEnv another_dotenv = DotEnv()
+
+Future main() async {
+  // To load the .env file contents into dotenv.
+  // NOTE: fileName defaults to .env and can be omitted in this case.
+  // Ensure that the filename corresponds to the path in step 1 and 2.
+  await dotenv.load(fileName: ".env");
+  //...runapp
+}
+
+You can then access variables from .env throughout the application
+
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+dotenv.env['VAR_NAME'];
+
+
+Merging 
+You can merge a map into the environment on load:
+
+await DotEnv.load(mergeWith: { "FOO": "foo", "BAR": "bar"});
+
+
+Null Safety
+
+Future<void> main() async {
+  await dotenv.load();
+
+  String foo = dotenv.get('VAR_NAME');
+
+  // Or with fallback.
+  String bar = dotenv.get('MISSING_VAR_NAME', fallback: 'sane-default');
+
+  // This would return null.
+  String? baz = dotenv.maybeGet('MISSING_VAR_NAME', fallback: null);
+}
+
+
+
+
+---------------------
+August 26 2023
+Biometrics (TOPIC)
+----------------------
+
+1. local_auth: ^1.1.10
+
+BiometricType.face
+BiometricType.fingerprint
+BiometricType.weak
+BiometricType.strong
+
+
+To check whether there is local authentication available 
+on this device or not, call canCheckBiometrics 
+(if you need biometrics support) and/or isDeviceSupported() 
+(if you just need some device-level authentication):
+
+final bool canAuthenticateWithBiometrics = await auth.canCheckBiometrics;
+final bool canAuthenticate = canAuthenticateWithBiometrics || await auth.isDeviceSupported();
+
+///Get a list of available biometric types.
+
+final List<BiometricType> availableBiometrics = await auth.getAvailableBiometrics();
+
+if (availableBiometrics.contains(BiometricType.fingerprint)...
+
+
+///Authenticating
+The authenticate() method uses biometric authentication when possible, but also allows 
+fallback to pin, pattern, or passcode.
+
+To require biometric authentication, pass AuthenticationOptions with biometricOnly set to true.
+
+final bool didAuthenticate = await auth.authenticate(
+    localizedReason: 'Please authenticate to show account balance',
+    options: const AuthenticationOptions(biometricOnly: true));
+
+
+
+
 Appendix
 ---------
 
@@ -63,3 +486,119 @@ BackgroundIsolateBinaryMessenger.ensureInitialized(token);
 
 
 
+--------------------------------------------------------
+Calling setState in a dialog
+--------------------------------------------------------
+By default dialogs don't use the same context as the parent from which it was called
+we can refresh the ui by wrapping it in a StatefulBuilder which has its own
+state and setState 
+
+example:
+
+await showDialog<void>(
+  context: context,
+  builder: (BuildContext context) {
+    int? selectedRadio = 0;
+    return AlertDialog(
+      content: StatefulBuilder(
+        builder: (BuildContext context, StateSetter setState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: List<Widget>.generate(4, (int index) {
+              return Radio<int>(
+                value: index,
+                groupValue: selectedRadio,
+                onChanged: (int? value) {
+                  setState(() => selectedRadio = value);
+                },
+              );
+            }),
+          );
+        },
+      ),
+    );
+  },
+);
+
+Source: https://api.flutter.dev/flutter/widgets/StatefulBuilder-class.html
+
+
+DidupdateWidget, DidDependenciesChange and DidStateChange
+-----------------------------------------------------------
+
+1. DidupdateWidget
+
+If the parent widget rebuilds and requests that this location in the tree 
+update to display a new widget with the same runtimeType and Widget.key, the 
+framework will update the widget property of this State object to refer to the 
+new widget and then call this method with the previous widget as an argument.
+
+dirty property
+
+When we call the setState method. The framework then marks the widget as dirty. 
+Whenever the State object is dirty(dirty is true), it has to be rebuilt by 
+calling the build method to reflect the change.
+
+deactivate method
+
+The framework calls this method whenever it removes this State object from 
+the tree. In some cases, the framework will reinsert the State object into 
+another part of the tree (e.g., if the subtree containing this State object 
+is grafted from one location in the tree to another due to the use of a GlobalKey).
+
+
+2. DidDependenciesChange
+
+
+
+
+https://api.flutter.dev/flutter/widgets/State/didUpdateWidget.html
+https://medium.com/@NALSengineering/flutter-from-zero-to-hero-part-8-widget-lifecycle-in-action-8dcb9abf3dcf
+
+
+
+------------------------
+Gesture on TextSpan
+-----------------------
+
+TextSpan(
+  text: "Terms and Conditions.",
+  recognizer: TapGestureRecognizer()
+   ..onTap = () => Navigator.of(context)
+       .push(MaterialPageRoute(
+              builder: (ctx) =>
+              ListenableProvider.value(
+               value: provider,
+                child:
+                 const TermsAndConditions(),
+                  ))),
+              style: AppTextStyles.fw400(
+            fontFamily: AppConstants.libreFranklin,
+            fontSize: 13,
+            color: AppColors.splashColor),
+    )
+
+
+----------------------------
+Scoped provider
+----------------------------
+ChangeNotifer
+
+then have a child that is a widget
+
+then in the navigation to the second screen you can 
+use a ListenableProvider.value(
+	value: provider
+	child: Screen()
+
+wrapped in the widget of the screen you are navigating to.
+
+
+--------------------------
+Permission screen flow
+--------------------------
+1. Splash screen check permission status
+2. open permission screen if not enabled
+3. start a timer that checks permission status every 500 milliseconds
+   and navigates away once permission is granted.
+4. each time button is tapped it requests for permission.
