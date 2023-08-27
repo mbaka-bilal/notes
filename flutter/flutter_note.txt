@@ -234,6 +234,85 @@ Future<void> getDirections() async {
 
 
 
+26 August 2023
+-----------------
+Geospatial data
+-----------------
+sources:
+https://aws.amazon.com/what-is/geospatial-data/#:~:text=Geospatial%20data%2C%20or%20geodata%2C%20is,by%20latitude%20and%20longitude%20coordinates.
+https://www.ibm.com/topics/geospatial-data
+
+Geospatial data, or geodata, is data that includes information related to 
+locations on the Earth’s surface. You can map objects, events, and other 
+real-world phenomena to a specific geographical area identified by latitude 
+and longitude coordinates. 
+
+Geospatial visualization
+-------------------------
+Geospatial visualization is when you create visualizations 
+(such as maps and 3D models) using geospatial data.
+
+Geospatial intelligence is a term that describes the 
+collection, analysis, and interpretation of geospatial data for 
+informed decision-making. It combines geographic data with 
+various other types of intelligence—including imagery, signals 
+intelligence, and human intelligence—to accurately represent a 
+location and its physical environment.
+
+Types of geospatial data
+---------------------------
+vector data:
+
+Vector data is geospatial information that uses digital elements 
+like points, lines, and polygons to represent geographic features. 
+Vector data often represents physical features such as roads, rivers, 
+and city boundaries. Vector data is widely used in geospatial information 
+applications such as mapping, location information, and navigation.
+
+For example, a visual representation using vector data might include 
+houses represented by points, roads represented by lines and entire 
+towns represented by polygons.
+
+Raster data:
+Rasters are geospatial data models that define space as a grid of 
+equally sized cells. Each grid cell represents location information like 
+temperature or soil quality. The raster is overlaid on a map image.
+
+Raster data creates imagery that’s substantially more complex, such as 
+photographs and satellite images.
+
+Geospatial technology
+----------------------
+Geospatial technology refers to all the technology required for the 
+collecting, storing and organizing of geographic information. It 
+includes the satellite technology which allowed for the geographic 
+mapping and analysis of Earth. Geospatial technology can be found in 
+several related technologies, such as Geographic Information Systems (GIS), 
+Global Positioning Systems (GPS), geofencing and remote sensing.
+
+Geospatial analytics is used to add timing and location to traditional 
+types of data and to build data visualizations. These visualizations 
+can include maps, graphs, statistics and cartograms that show historical 
+changes and current shifts.
+
+
+Geospatial information systems (GIS) relate specifically to the physical 
+mapping of data within a visual representation. For example, when a 
+hurricane map (which shows location and time) is overlaid with another 
+layer showing potential areas for lightning strikes, you’re seeing GIS 
+in action.
+
+
+
+
+
+
+
+
+
+
+
+
 --------------------------------------------
 Releasing flutter apps to store (Topic)
 ---------------------------------------------
@@ -602,3 +681,163 @@ Permission screen flow
 3. start a timer that checks permission status every 500 milliseconds
    and navigates away once permission is granted.
 4. each time button is tapped it requests for permission.
+
+
+-----------------------
+How to fix ios debug build error (swift compile error: (xCode): using bridging headers with 
+module interfaces is unsupported)
+----------------------------------------
+
+TO fix this add this to the bottom of pod
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'NO'
+    end
+  end
+end
+
+not the 2 space indexing.
+
+Then open the ios folder in xcode, 
+1. select pod  
+2. Build settings
+3. Search for build library for distrubution and change it to "no"
+
+P.S i tried building with xcode 13 and pod 1.1 with a iphone 14 pro max simulator
+but it failed, it ran when i used xcode14 and pod (unknown) with a iphone 14 prox max
+simulator.
+
+
+------------------------------------------------------
+Creating a number validate field, like for enter OTP
+------------------------------------------------------
+void changeFocus(String str) {
+    if (str.length == 1) {
+      FocusScope.of(context).nextFocus();
+    }
+    if (str.isEmpty) {
+      FocusScope.of(context).previousFocus();
+    }
+  }
+  
+
+-----------------------------------------
+pushAndRemoveUntil
+----------------------------------------
+sources:
+https://api.flutter.dev/flutter/widgets/NavigatorState/pushAndRemoveUntil.html#:~:text=To%20remove%20routes%20until%20a,route)%20%3D%3E%20false%20). 
+
+Push the given route onto the navigator, and then remove all the previous 
+routes until the predicate returns true. 
+
+To remove all the routes below the pushed route, use a RoutePredicate that 
+always returns false (e.g. (Route<dynamic> route) => false).
+
+
+------------------------------------
+Date picker
+------------------------------------
+
+Android
+----------
+source: https://api.flutter.dev/flutter/material/showDatePicker.html
+
+final date = await showDatePicker(
+  context: context,
+  initialDate: DateTime.now(),
+  firstDate: DateTime(1990),
+  lastDate: DateTime.now(),
+);
+
+This returns a future with of the date time.
+
+IOS
+----
+sources: https://api.flutter.dev/flutter/cupertino/CupertinoDatePicker-class.html
+
+CupertinoDatePicker(
+  initialDateTime: DateTime.now(),
+  maximumDate: DateTime.now(),
+  onDateTimeChanged: (dateTime) {
+    dateOfBirth = dateTime;
+    setState(() {});
+});
+
+
+
+---------------------------
+Formatting date time
+---------------------------
+
+Intl
+-----
+
+sources: https://pub.dev/packages/intl
+
+DateFormat.yMMMMEEEEd().format(aDateTime);
+  ==> 'Wednesday, January 10, 2012'
+DateFormat('EEEEE', 'en_US').format(aDateTime);
+  ==> 'Wednesday'
+DateFormat('EEEEE', 'ln').format(aDateTime);
+  ==> 'mokɔlɔ mwa mísáto'
+  
+  
+DateFormat.yMd('en_US').parse('1/10/2012');
+DateFormat('Hms', 'en_US').parse('14:23:01');
+
+DateFormat.yMEd().add_jms().format(DateTime.now());
+  ==> 'Thu, 5/23/2013 10:21:47 AM'
+  
+This library uses the ICU/JDK date/time pattern specification 
+both for complete format specifications and also the abbreviated 
+'skeleton' form which can also adapt to different locales and is 
+preferred where available.  
+
+Skeletons: These can be specified either as the ICU constant name 
+or as the skeleton to which it resolves. The supported set of 
+skeletons is as follows. For each skeleton there is a named constructor 
+that can be used to create it. It's also possible to pass the skeleton 
+as a string, but the constructor is preferred. 
+example .yMed(),
+
+ICU Name                   Skeleton
+ --------                   --------
+ DAY                          d
+ ABBR_WEEKDAY                 E
+ ......
+ 
+ Explicit Pattern Syntax
+ -------------------------
+ 
+ Symbol   Meaning                Presentation       Example
+------   -------                ------------       -------
+G        era designator         (Text)             AD
+y        year                   (Number)           1996
+M        month in year          (Text & Number)    July & 07
+......
+
+Symbol   Meaning                Presentation       Example
+------   -------                ------------       -------
+z        time zone              (Text)             Pacific Standard Time
+Z        time zone (RFC 822)    (Number)           -0800
+v        time zone (generic)    (Text)             Pacific Time
+
+Text:
+
+5 pattern letters--use narrow form for standalone. Otherwise not used.
+4 or more pattern letters--use full form,
+3 pattern letters--use short or abbreviated form if one exists
+less than 3--use numeric form if one exists
+
+Number: the minimum number of digits. Shorter numbers are zero-padded 
+to this amount (e.g. if 'm' produces '6', 'mm' produces '06'). 
+Year is handled specially; that is, if the count of 'y' is 2, the Year 
+will be truncated to 2 digits. 
+(e.g., if 'yyyy' produces '1997', 'yy' produces '97'.) Unlike other 
+fields, fractional seconds are padded on the right with zero. 
+
+ 
+(Text & Number): 3 or over, use text, otherwise use number.
