@@ -303,6 +303,10 @@ layer showing potential areas for lightning strikes, you’re seeing GIS
 in action.
 
 
+27 August 2023
+-------------------
+Showing traffic on polyline
+----------------------------
 
 
 
@@ -498,6 +502,229 @@ final bool didAuthenticate = await auth.authenticate(
     options: const AuthenticationOptions(biometricOnly: true));
 
 
+
+
+
+-----------------
+April 28 2023
+-----------------
+Json serialization (Topic)
+-----------------------------
+With this we can automate making of models 
+
+
+
+
+
+--------------------
+April 30 2023
+----------------------------
+Notifications
+----------------------------
+1. Firebase Cloud Messaging
+
+Life cycle flow
+----------------
+1. Register devices to receive messages from FCM. An instance of a 
+client app registers to receive messages, obtaining a registration 
+token that uniquely identifies the app instance.
+
+2. Send and receive downstream messages.
+   i. Send a message. The app server sends messages to the client app:
+
+        a. The message is composed, either in the Notifications composer or a 
+        trusted environment, and a message request is sent to the FCM backend.
+        
+        b. The FCM backend receives the message request, generates a message ID 
+        and other metadata, and sends it to the platform specific transport layer.
+        
+        c. When the device is online, the message is sent via the platform-specific 
+        transport layer to the device.
+
+        d. On the device, the client app receives the message or notification.
+
+Message types
+--------------
+i. Notification message
+ii. Data message
+
+Notification messages contain a predefined set of user-visible keys. Data messages, 
+by contrast, contain only your user-defined custom key-value pairs. Notification 
+messages can contain an optional data payload. Maximum payload for both message 
+types is 4000 bytes, except when sending messages from the Firebase console, which 
+enforces a 1024 character limit.
+
+Use notification messages when you want the FCM SDK to handle displaying a notification 
+automatically when your app is running in the background. Use data messages when you 
+want to process the messages with your own client app code.
+
+FCM can send a notification message including an optional data payload. In such cases, 
+FCM handles displaying the notification payload, and the client app handles the 
+data payload.
+
+Notification messages are delivered to the notification tray when the app is in the 
+background. For apps in the foreground, messages are handled by a callback function.
+
+For Android there is a limit of 100 messages that can be stored without collapsing. 
+If the limit is reached, all stored messages are discarded. When the device is back 
+online, it receives a special message indicating that the limit was reached. The app 
+can then handle the situation properly, typically by requesting a full sync from the 
+app server.
+
+A collapsible message is a message that may be replaced by a new message if it has yet 
+to be delivered to the device.
+
+To mark a message as collapsible on Android, include the collapse_key parameter in the 
+message payload. By default, the collapse key is the app package name registered in 
+the Firebase console. The FCM server can simultaneously store four different collapsible 
+messages per device, each with a different collapse key. If you exceed this number, 
+FCM only keeps four collapse keys, with no guarantees about which ones are kept.
+
+Topic messages with no payload are collapsible by default. Notification messages are 
+always collapsible and will ignore the collapse_key parameter.
+
+Setting the priority of a message
+----------------------------------
+i. Normal priority. Normal priority messages are delivered immediately when the app is 
+in the foreground. For backgrounded apps, delivery may be delayed. For less 
+time-sensitive messages, such as notifications of new email, keeping your UI in sync, 
+or syncing app data in the background, choose normal delivery priority.
+
+ii.High priority. FCM attempts to deliver high priority messages immediately even if 
+the device is in Doze mode. High priority messages are for time-sensitive, user 
+visible content.
+
+When sending data messages to Apple devices, the priority must be set to 5, or 
+normal priority. Messages sent with high priority are rejected by the FCM backend 
+with the error INVALID_ARGUMENT.
+
+example
+---------
+
+{
+  "message":{
+    "topic":"subscriber-updates",
+    "notification":{
+      "body" : "This week's edition is now available.",
+      "title" : "NewsMagazine.com",
+    },
+    "data" : {
+      "volume" : "3.21.15",
+      "contents" : "http://www.news-magazine.com/world-week/21659772"
+    },
+    "android":{
+      "priority":"normal"
+    },
+    "apns":{
+      "headers":{
+        "apns-priority":"5"
+      }
+    },
+    "webpush": {
+      "headers": {
+        "Urgency": "high"
+      }
+    }
+  }
+}
+
+Setting the lifespan of a message
+----------------------------------
+
+On Android and Web/JavaScript, you can specify the maximum lifespan of a message. 
+The value must be a duration from 0 to 2,419,200 seconds (28 days), and it corresponds 
+to the maximum period of time for which FCM stores and attempts to deliver the message. 
+Requests that don't contain this field default to the maximum period of four weeks.
+
+Here are some possible uses for this feature:
+
+1. Video chat incoming calls
+2. Expiring invitation events
+3. Calendar events
+
+Another advantage of specifying the lifespan of a message is that FCM never throttles 
+messages with a time-to-live value of 0 seconds. In other words, FCM guarantees best 
+effort for messages that must be delivered "now or never." Keep in mind that a time_to_live 
+value of 0 means messages that can't be delivered immediately are discarded. 
+However, because such messages are never stored, this provides the best latency for 
+sending notification messages.
+
+Here is an example of a request that includes TTL:
+
+{
+  "message":{
+    "token":"bk3RNwTe3H0:CI2k_HHwgIpoDKCIZvvDMExUdFQ3P1...",
+    "data":{
+      "Nick" : "Mario",
+      "body" : "great match!",
+      "Room" : "PortugalVSDenmark"
+    },
+    "apns":{
+      "headers":{
+        "apns-expiration":"1604750400"
+      }
+    },
+    "android":{
+      "ttl":"4500s"
+    },
+    "webpush":{
+      "headers":{
+        "TTL":"4500"
+      }
+    }
+  }
+}
+
+Lifetime of a message
+-----------------------
+
+When an app server posts a message to FCM and receives a message ID back, 
+it does not mean that the message was already delivered to the device. 
+Rather, it means that it was accepted for delivery. What happens to the 
+message after it is accepted depends on many factors.
+
+In the best-case scenario, if the device is connected to FCM, the screen is 
+on and there are no throttling restrictions, the message is delivered 
+right away.
+
+If the device is connected but in Doze, a low priority message is stored by 
+FCM until the device is out of Doze. And that's where the collapse_key flag 
+plays a role: if there is already a message with the same collapse key 
+(and registration token) stored and waiting for delivery, the old message 
+is discarded and the new message takes its place (that is, the old message 
+is collapsed by the new one). However, if the collapse key is not set, both 
+the new and old messages are stored for future delivery.
+
+
+For Android devices with direct channel messaging enabled, if the device has 
+not connected to FCM for more than one month, FCM still accepts the message but 
+immediately discards it. If the device connects within four weeks of the last 
+data message you sent to it, your client receives the onDeletedMessages() 
+callback. The app can then handle the situation properly, typically by 
+requesting a full sync from the app server.
+
+Finally, when FCM attempts to deliver a message to the device and the app was 
+uninstalled, FCM discards that message right away and invalidates the registration 
+token. Future attempts to send a message to that device results in a 
+NotRegistered error.
+
+Adding analytics labels to messages
+------------------------------------
+
+Labeling messages is very useful for custom analysis, allowing you to filter 
+delivery statistics by labels or sets of labels. You can add a label to any 
+message sent via the HTTP v1 API by setting the fcmOptions.analyticsLabel field 
+in the message object, or in the platform-specific AndroidFcmOptions or 
+ApnsFcmOptions fields.
+
+Labeling messages is very useful for custom analysis, allowing you to filter 
+delivery statistics by labels or sets of labels. You can add a label to any 
+message sent via the HTTP v1 API by setting the fcmOptions.analyticsLabel field 
+in the message object, or in the platform-specific AndroidFcmOptions or 
+ApnsFcmOptions fields.
+
+Max length is 50 characters. You can specify up to 100 unique labels per 
+day; messages with labels added beyond that limit are not reported.
 
 
 Appendix
@@ -841,3 +1068,95 @@ fields, fractional seconds are padded on the right with zero.
 
  
 (Text & Number): 3 or over, use text, otherwise use number.
+
+to escape characters wrap them in ''
+
+
+
+--------------------------------------------------------
+Light and dark theme, based on both system and manually
+--------------------------------------------------------
+We can choose darkmode, light mode or system.
+
+1. move our changenotifers to main
+2. in myapp add 
+
+@override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangePlatformBrightness() async {
+    super.didChangePlatformBrightness();
+    final provider = context.read<ThemeChangeNotifier>();
+    //if storage key is null, assumer we selected system mode.
+    //we tried MediaQuery but it was returning the old state of
+    // the brightness
+    final status = await DataStorage.darkModeStatus();
+    if (status == null) {
+      final brightness =
+          WidgetsBinding.instance.platformDispatcher.platformBrightness;
+      provider.updateDarkMode(brightness);
+    }
+  }
+
+
+3. our provider
+
+class ThemeChangeNotifier extends ChangeNotifier {
+  bool _isDarkMode = false;
+
+  get isDarkMode => _isDarkMode;
+
+  void updateDarkMode(Brightness brightness) {
+    if (brightness == Brightness.dark) {
+      _isDarkMode = true;
+    } else {
+      _isDarkMode = false;
+    }
+    notifyListeners();
+  }
+}
+
+
+4. body of our myApp
+
+return Consumer<ThemeChangeNotifier>(
+      builder: (context, provider, child) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Border',
+        // darkTheme: AppTheme.darkTheme,
+        theme: (provider.isDarkMode) ? AppTheme.darkTheme : AppTheme.lightTheme,
+        // themeMode: provider.themeMode,
+        home: const SplashScreen(),
+      ),
+    );
+    
+5. A basic theme
+
+class AppTheme {
+  //Themes
+  static final darkTheme = ThemeData(
+      scaffoldBackgroundColor: AppColors.scaffoldBackgroundColorDark,
+      brightness: Brightness.dark,
+      elevatedButtonTheme: ElevatedButtonThemeData(style: ButtonStyle(
+          backgroundColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.disabled)) {
+          return Colors.grey;
+        }
+        return null;
+      }))));
+
+  static final lightTheme = ThemeData(
+      scaffoldBackgroundColor: AppColors.alabastar,
+      brightness: Brightness.light,
+      elevatedButtonTheme: ElevatedButtonThemeData(style: ButtonStyle(
+          backgroundColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.disabled)) {
+          return Colors.grey;
+        }
+        return null;
+      }))));
+}
