@@ -1,0 +1,14 @@
+Ci(continious integration)
+
+Helps to continually merge code in the central repo.
+
+CD(continious deployment or condom)
+
+Automates the software release process, from building,
+testing to releasing.
+
+popular ones are: 
+
+codemagic
+jenkins
+circle ci

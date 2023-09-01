@@ -1,0 +1,104 @@
+-----------------------------------
+Releasing IOS apps with codemagic
+-----------------------------------
+change your bundle id for ios 
+
+Open your iOS project in an editor and open the 
+project.pbxproj file and set the application 
+PRODUCT_BUNDLE_IDENTIFIER to the bundle id you
+had just created. This is mentioned in multiple 
+places in the project, so make sure to change it 
+everywhere. You can edit the file without a Mac.
+
+
+Incase it fails it might be podfile issue
+so remote connect to codemagic use the commands
+below and build the podfile.
+
+> cd iOS
+> pod init
+> gh auth login --with-token YOUR_GITHUB_PAT_TOKEN
+> git add .
+> git commit -m "Added Podfile"
+> git push
+
+.ipa file
+------------
+The .ipa is a binary that you can run on a physical 
+device similar to an .apk for Android. We cannot 
+produce an .ipa binary on anything other than macOS. 
+The way to overcome the obstacle will be to use a 
+continuous integration and delivery service with 
+macOS environment. We will need to set up our Codemagic 
+CI/CD to be able to do code signing with Xcode and 
+build the .ipa binary and later publish it to App 
+Store Connect.
+
+register the bundle id in apple
+----------------------------------
+
+In iOS the package name is the bundle identifier in Info.plist:
+
+<key>CFBundleIdentifier</key>
+<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+
+which is found in Runner.xcodeproj/project.pbxproj:
+
+PRODUCT_BUNDLE_IDENTIFIER = com.example.appname;
+
+
+then account > identifiers
+
+(https://developer.apple.com/account/resources/identifiers/list)
+
+Next create an app application record on app store connect
+
+account > apps 
+
+(https://appstoreconnect.apple.com/apps)
+
+Next create a key, Use developer access
+
+Users and Access > Keys.
+
+
+
+In order to code sign iOS apps, you need an Apple developer 
+account (one of the requirements mentioned in the beginning), 
+a development and a distribution certificate, your app ID and 
+the matching provisioning profiles.
+
+Provisioning profiles are files that can only be created by 
+the Apple Developer website which specify for an app things 
+such as who can sign the app, where those apps can run and 
+what the apps are entitled to do by storing information such 
+as the certificate that can be used to sign the app, the apps 
+unique identifier and other app metadata such as the unique 
+IDs of the devices the app is allowed to run on.
+
+The reason that only the Apple Developer website is able to 
+create provisioning profiles is that the profiles themselves 
+are signed by Apple, using a certificate they hold.
+
+As you might be able to tell from the above, the Provisioning 
+Profile lies at the heart of the code signing process on iOS 
+(and in fact all Apple platforms) and much more details about 
+them can be found at in the Apple technote on the subject.
+
+An important point to note is that there can (and likely will) 
+be multiple provisioning profiles per each of your apps. For 
+example the Ad-Hoc provisioning profiles are only intended 
+for you to use when you are building your app to distribute 
+to a small number of users (or testers) directly and you whose 
+device UDID's you would need to add directly into the Apple 
+Developer portal. While the App Store profile is used for 
+uploading your app build to App Store Connect, for distribution 
+via Test Flight or finally via the public App Store itself.
+
+
+then download this key and add it to codemagic, in settings,
+you can build the app and store it locally to run it on your 
+device and enabling the key.
+
+
+

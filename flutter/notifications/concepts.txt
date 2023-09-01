@@ -1,0 +1,18 @@
+concepts
+----------
+
+sources: https://developer.android.com/develop/ui/views/notifications/channels
+
+
+Notification channels
+----------------------
+This allows us to group our notification, for android it 
+is required since 8.0 or won't show up.
+It allows users to turn off a specific channel or modify
+its setting such as turning off sound e.t.c
+
+check out alarm app on android to see more.
+
+Notificaion groups
+-------------------
+

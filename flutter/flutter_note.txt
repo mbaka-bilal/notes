@@ -512,6 +512,89 @@ Json serialization (Topic)
 -----------------------------
 With this we can automate making of models 
 
+using json_annotation, and json_serializable
+--------------------------------------------
+source::::
+https://docs.flutter.dev/data-and-backend/serialization/json
+
+add json_annotation to pub
+and build_runner along with json_serializable to dev
+
+example:::
+
+part 'user.g.dart';
+
+@JsonSerializable()
+class User {
+  User(this.name, this.email);
+
+  String name;
+  String email;
+  
+  @JsonKey(name: 'registration_date_millis')
+  final int registrationDateMillis;
+  
+  factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
+  
+  Map<String, dynamic> toJson() => _$UserToJson(this);
+}
+
+
+@JsonKey matches to variable gotten from the server to a different
+name when creating the object.
+
+Modifying @JsonSerializable(fieldRename: FieldRename.snake) is 
+equivalent to adding @JsonKey(name: '<snake_case>') to each field.
+
+ways to verify the data
+------------------------
+@JsonKey(defaultValue: false)
+final bool isAdult;
+
+@JsonKey(required: true)
+final String id;
+
+@JsonKey(ignore: true)
+final String verificationCode;
+
+generating the output
+-----------------------
+i. one time code generation
+dart run build_runner build --delete-conflicting-outputs 
+
+ii. generating code continuously
+dart run build_runner watch --delete-conflicting-outputs
+
+generating code for nested classes
+-----------------------------------
+@JsonSerializable()
+class Address {
+  String street;
+  String city;
+
+  Address(this.street, this.city);
+
+  factory Address.fromJson(Map<String, dynamic> json) =>
+      _$AddressFromJson(json);
+  Map<String, dynamic> toJson() => _$AddressToJson(this);
+}
+
+import 'package:json_annotation/json_annotation.dart';
+
+import 'address.dart';
+
+part 'user.g.dart';
+
+@JsonSerializable()
+class User {
+  User(this.name, this.address);
+
+  String name;
+  Address address;
+
+  factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
+  Map<String, dynamic> toJson() => _$UserToJson(this);
+}
 
 
 
@@ -726,6 +809,170 @@ ApnsFcmOptions fields.
 Max length is 50 characters. You can specify up to 100 unique labels per 
 day; messages with labels added beyond that limit are not reported.
 
+
+Setup
+-------
+Configure Web Credentials with FCM
+-------------------------------------
+
+The FCM Web interface uses Web credentials called 
+"Voluntary Application Server Identification," or "VAPID" keys, to 
+authorize send requests to supported web push services. To subscribe 
+your app to push notifications, you need to associate a pair of keys with
+your Firebase project. You can either generate a new key pair or import your 
+existing key pair through the Firebase console.
+
+flutter pub add firebase_messaging
+
+Access the registration token
+-------------------------------
+final fcmToken = await FirebaseMessaging.instance.getToken();
+
+on Web
+//the public key.
+final fcmToken = await FirebaseMessaging.instance.getToken(vapidKey: "BKagOny0KF_2pCJQ3m....moL0ewzQ8rZu");
+
+FirebaseMessaging.instance.onTokenRefresh
+    .listen((fcmToken) {
+      // TODO: If necessary send token to application server.
+
+      // Note: This callback is fired at each app startup and whenever a new
+      // token is generated.
+    })
+    .onError((err) {
+      // Error getting token.
+    });
+    
+    
+    
+Handling interaction
+----------------------
+
+1. getInitialMessage(): If the application is opened from a terminated state, 
+this method returns a Future containing a RemoteMessage. Once consumed, 
+the RemoteMessage will be removed.
+
+2. onMessageOpenedApp: A Stream which posts a RemoteMessage when the application 
+is opened from a background state.
+    
+Example
+
+class Application extends StatefulWidget {
+  @override
+  State<StatefulWidget> createState() => _Application();
+}
+
+class _Application extends State<Application> {
+  // In this example, suppose that all messages contain a data field with the key 'type'.
+  Future<void> setupInteractedMessage() async {
+    // Get any messages which caused the application to open from
+    // a terminated state.
+    RemoteMessage? initialMessage =
+        await FirebaseMessaging.instance.getInitialMessage();
+
+    // If the message also contains a data property with a "type" of "chat",
+    // navigate to a chat screen
+    if (initialMessage != null) {
+      _handleMessage(initialMessage);
+    }
+
+    // Also handle any interaction when the app is in the background via a
+    // Stream listener
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
+  }
+
+  void _handleMessage(RemoteMessage message) {
+    if (message.data['type'] == 'chat') {
+      Navigator.pushNamed(context, '/chat',
+        arguments: ChatArguments(message),
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Run code required to handle interacted messages in an async function
+    // as initState() must not be async
+    setupInteractedMessage();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text("...");
+  }
+}
+
+3. foreground
+
+FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  print('Got a message whilst in the foreground!');
+  print('Message data: ${message.data}');
+
+  if (message.notification != null) {
+    print('Message also contained a notification: ${message.notification}');
+  }
+});
+
+On Android, you must create a "High Priority" notification channel.
+On iOS, you can update the presentation options for the application.
+
+Handle background messages by registering a onBackgroundMessage handler. 
+When messages are received, an isolate is spawned (Android only, iOS/macOS 
+does not require a separate isolate) allowing you to handle messages even 
+when your application is not running.
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // If you're going to use other Firebase services in the background, such as Firestore,
+  // make sure you call `initializeApp` before using other Firebase services.
+  await Firebase.initializeApp();
+
+  print("Handling a background message: ${message.messageId}");
+}
+
+void main() {
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  runApp(MyApp());
+}
+
+Request permission to receive messages (Apple and Web)
+-------------------------------------------------------
+
+FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+NotificationSettings settings = await messaging.requestPermission(
+  alert: true,
+  announcement: false,
+  badge: true,
+  carPlay: false,
+  criticalAlert: false,
+  provisional: false,
+  sound: true,
+);
+
+authorized: The user granted permission.
+denied: The user denied permission.
+notDetermined: The user has not yet chosen whether to grant permission.
+provisional: The user granted provisional permission
+
+On Android authorizationStatus will return authorized if the user has not 
+disabled notifications for the app via the operating systems settings.    
+    
+    
+    
+    
+----------------------------------
+Custom camera
+----------------------------------    
+Flutter camera
+-------------------
+Images
+-------
+    
+    
+    
 
 Appendix
 ---------
@@ -1084,7 +1331,20 @@ We can choose darkmode, light mode or system.
 @override
   void initState() {
     super.initState();
+     updateDarkModeStatus();
     WidgetsBinding.instance.addObserver(this);
+  }
+  
+   void updateDarkModeStatus() async {
+    final provider = context.read<ThemeChangeNotifier>();
+    final status = await DataStorage.darkModeStatus();
+    if (status != null) {
+      provider.updateDarkMode((status) ? Brightness.dark : Brightness.light);
+    } else {
+      final brightness =
+          WidgetsBinding.instance.platformDispatcher.platformBrightness;
+      provider.updateDarkMode(brightness);
+    }
   }
 
   @override
@@ -1159,4 +1419,31 @@ class AppTheme {
         }
         return null;
       }))));
+}
+
+Creating a singleton in dart
+------------------------------
+class Singleton{
+	static final Singleton _singleton = Singleton._internal();
+	
+	factory Singleton(){
+	  return _singleton;
+	}
+	
+   Singleton._internal();
+}
+
+passing variables
+
+class Singleton{
+  static final Singleton _singleton = Singleton._internal();
+  
+  factory Singleton(int variable){
+    _singleton.variable = variable;
+    return _singleton;
+  }
+  
+  Singleton._internal();
+  
+  late int variable;
 }

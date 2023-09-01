@@ -1,0 +1,9 @@
+Running things continiously in the backgroud when our app 
+in terminated using workmanager
+-----------------------------------------------------------
+
+Flutter WorkManager is a wrapper around Android's WorkManager, 
+iOS' performFetchWithCompletionHandler and iOS BGAppRefreshTask, 
+effectively enabling headless execution of Dart code in the background.
+
+

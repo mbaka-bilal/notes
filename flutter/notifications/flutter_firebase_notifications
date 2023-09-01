@@ -1,0 +1,67 @@
+Firebase_notifications
+-------------------------
+Installing
+-----------
+Make sure our flutter firebase project is initialized.
+
+packages needed:
+1. firebase_messaging
+2. firebase_core
+
+Android
+--------
+FCM clients require devices running Android 4.4 or higher 
+that also have Google Play services installed, or an emulator 
+running Android 4.4 with Google APIs.
+
+get the sha1 and 256 debug and release keys and add it to 
+the project.
+
+> Keytool -list -v -keystore ~/.android/debug.keystore -alias 
+  androiddebugkey -storepass android -keypass android
+
+> Keytool -list -v -keystore <path_to_release_keystore> -alias 
+  <alias_name> -storepass <store_password> -keypass <key_pass>
+  
+don't forget to reinitalize the project and redownload 
+google-services.json file.
+
+Web
+----
+For web we only need to add key pairs by either:
+a. Generate a new key pair
+b. Import an existing key pair
+
+
+
+------------------------------------------
+Handling notifications without a backend 
+(using firebase cloud messaing website)
+-----------------------------------------
+
+There is really nothing to do, just go to the site and test
+it out after adding your fcm token if you want to use the test,
+or creating a new message.
+
+to get our fcm token
+
+try{
+  final fcmToken = await FirebaseMessaging.instance.getToken();
+}catch(e){
+}
+
+make sure you wrap it in try-catch so our app does not exits
+if we are unable to get the token.
+
+
+Handling recevied notifications
+----------------------------------
+1. Foreground
+---------------
+FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    //message is for if the notification contains a message
+    //message.data
+    //message.notification (nullable)
+});
+
+

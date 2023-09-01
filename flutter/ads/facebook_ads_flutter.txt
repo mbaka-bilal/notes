@@ -1,0 +1,83 @@
+references:
+https://web.facebook.com/business/help/754990972934516?_rdc=1&_rdr
+https://developers.facebook.com/docs/app-events/getting-started-app-events-android#auto-events
+https://web.facebook.com/events_manager2/list/app
+
+
+Facebook App Install Ads (app promotion campaigns)
+-------------------------
+Facebook app install ads is a way for us to advertise
+our applications on facebook. It allows us to use 
+their api and sdk to target, which gives us access
+to their algorithm, allowing us to advertise to 
+people who have a higher probability of performing
+a specifice action such as
+
+i. tap the ad
+ii. install the app
+
+and we are charged based on these things, for example
+for taps we are charged based on the number of users
+that taps on the ad.
+
+with the sdk we also have access to track in app user
+event such as if a user adds to cart e.t.c. On the 
+facebook ad manager platform we can view various 
+metrics.
+
+why do we need the sdk?
+
+You don't need to register your app or implement the 
+SDK in order to run ads using the app promotion objective, 
+but your ads will automatically optimize for link clicks 
+rather than app installs. In addition, your campaign will 
+not track any installs that happen as a result of your ads 
+unless your app is registered and the SDK is correctly 
+implemented.
+
+this is the landing page 
+
+https://adsmanager.facebook.com/
+
+to see your apps
+https://developers.facebook.com/
+
+then create an app and add a platform, to get the
+key hashes
+
+keytool -exportcert -alias androiddebugkey \
+-keystore ~/.android/debug.keystore \
+| openssl sha1 -binary | openssl base64
+
+
+Steps
+--------
+1. add and app 
+----------------
+go to https://developers.facebook.com/micro_site/url/?click_from_context_menu=true&country=NG&destination=https%3A%2F%2Fdevelopers.facebook.com%2Fapps&event_type=click&last_nav_impression_id=0AEVjDSye49yTXywQ&max_percent_page_viewed=11&max_viewport_height_px=580&max_viewport_width_px=1280&orig_http_referrer=https%3A%2F%2Fdevelopers.facebook.com%2Fdocs%2Fapp-events%2Fgetting-started-app-events-android&orig_request_uri=https%3A%2F%2Fdevelopers.facebook.com%2Fajax%2Fdocs%2Fnav%2F%3Fpath1%3Dapp-events%26path2%3Dgetting-started-app-events-android&region=emea&scrolled=true&session_id=1KhbFdTVpe6Y7VdHT&site=developers
+
+then create the app add the key hases, android id,class name and
+add Privacy Policy URL - Provide a Privacy Policy URL. 
+Required to take your app public.
+Terms of Service URL - Provide a Terms of Service URL.
+
+
+2: Link Your Facebook Ad Account with Your App
+------------------------------------------------
+To run ads and measure installs in the Ads Manager, you are required to 
+associate at least one Ad Account with your app.
+
+1. In the app dashboard click Settings > Advanced.
+2. In Authorized Ad Account IDs, add your Ad Account IDs. You can get your 
+ad account IDs from your Ads Manager.
+3. If you also have a business account, in Authorized Businesses, add 
+your Business Manager ID. You can find your Business Manager ID in the URL 
+of your Business Manager.
+
+
+3: Integrate the Facebook SDK in Your Android App
+--------------------------------------------------
+
+
+
+

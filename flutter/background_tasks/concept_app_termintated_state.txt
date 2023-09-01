@@ -1,0 +1,264 @@
+sources: 
+
+https://developer.android.com/guide/components/broadcasts
+https://chromium.googlesource.com/android_tools/+/refs/heads/master/sdk/platforms/android-28/data/broadcast_actions.txt
+https://developer.android.com/about/versions/oreo/background
+https://medium.com/@Codeible/understanding-and-using-services-in-android-background-foreground-services-8130f6bbf2a5#:~:text=A%20Background%20Service%20is%20a,bound%20to%20is%20still%20active.
+
+
+
+--------------------------------------------------
+Understanding background and foreground services 
+and states in android
+--------------------------------------------------
+For Android Developers, a Service is a component that 
+runs on the background to perform long-running tasks.
+
+There are 3 types of services in Android:
+
+(1) Background
+
+(2) Foreground
+
+(3) Bound
+
+
+A Background Service is a service that runs only when the 
+app is running so it’ll get terminated when the app is 
+terminated.
+
+A Foreground Service is a service that stays alive even 
+when the app is terminated.
+
+And a Bound Service is a service that runs only if 
+the component it is bound to is still active.
+
+
+
+
+-------------------------------------
+Background Execution Limits Android
+--------------------------------------
+Some limitation were places from Android 8.0
+
+1. Background Service Limitations: While an app is idle, 
+there are limits to its use of background services. This 
+does not apply to foreground services, which are more 
+noticeable to the user.
+
+2. Broadcast Limitations: With limited exceptions, apps 
+cannot use their manifest to register for implicit broadcasts. 
+They can still register for these broadcasts at runtime, and 
+they can use the manifest to register for explicit broadcasts 
+targeted specifically at their app.
+
+In most cases, apps can work around these limitations by using 
+JobScheduler jobs. This approach lets an app arrange to perform 
+work when the app isn't actively running, but still gives the 
+system the leeway to schedule these jobs in a way that doesn't 
+affect the user experience.
+
+While an app is in the foreground, it can create and run both 
+foreground and background services freely. When an app goes into 
+the background, it has a window of several minutes in which it 
+is still allowed to create and use services. At the end of that 
+window, the app is considered to be idle. At this time, the 
+system stops the app's background services, just as if the app 
+had called the services' Service.stopSelf() methods.
+
+Under certain circumstances, a background app is placed on a 
+temporary allowlist for several minutes. While an app is on the 
+allowlist, it can launch services without limitation, and its 
+background services are permitted to run. An app is placed on 
+the allowlist when it handles a task that's visible to the 
+user, such as:
+
+Handling a high-priority Firebase Cloud Messaging (FCM) message.
+Receiving a broadcast, such as an SMS/MMS message.
+Executing a PendingIntent from a notification.
+Starting a VpnService before the VPN app promotes itself to the foreground.
+
+In many cases, your app can replace background services with 
+JobScheduler jobs. For example, CoolPhotoApp needs to check 
+whether the user has received shared photos from friends, 
+even if the app isn't running in the foreground. Previously, 
+the app used a background service which checked with the 
+app's cloud storage. To migrate to Android 8.0 (API level 26), 
+the developer replaces the background service with a scheduled 
+job, which is launched periodically, queries the server, then quits.
+
+
+
+-------------------
+Android Broadcasts
+-------------------
+
+Android apps can send or receive broadcast messages from the 
+Android system and other Android apps.
+
+For example, the Android system sends broadcasts when various 
+system events occur, such as when the system boots up or the 
+device starts charging. Apps can also send custom broadcasts, 
+for example, to notify other apps of something that they might 
+be interested in.
+
+Apps can register to receive specific broadcasts. When a 
+broadcast is sent, the system automatically routes broadcasts 
+to apps that have subscribed to receive that particular type 
+of broadcast.
+
+System broadcasts
+------------------
+The system automatically sends broadcasts when various system 
+events occur, such as when the system switches in and out of 
+airplane mode. System broadcasts are sent to all apps that are 
+subscribed to receive the event.
+
+The broadcast message itself is wrapped in an Intent object 
+whose action string identifies the event that occurred 
+(for example android.intent.action.AIRPLANE_MODE). The intent 
+may also include additional information bundled into its extra 
+field. For example, the airplane mode intent includes a boolean 
+extra that indicates whether or not Airplane Mode is on.
+
+
+---------------------
+Foreground services
+---------------------
+Foreground services perform operations that are noticeable to the user.
+
+Foreground services show a status bar notification, to make users aware 
+that your app is performing a task in the foreground and is consuming 
+system resources.
+
+Examples of apps that use foreground services include the following:
+
+i. A music player app that plays music in a foreground service. The 
+   notification might show the current song being played.
+
+ii. A fitness app that records a user's run in a foreground service, 
+    after receiving permission from the user. The notification might 
+    show the distance that the user has traveled during the current fitness 
+    session.
+
+Only use a foreground service when your app needs to perform a task that 
+is noticeable by the user, even when they're not directly interacting with 
+the app. If the action is of low enough importance that you want to use a 
+minimum-priority notification, create a background task instead.
+
+User can dismiss notification by default
+-----------------------------------------
+Starting in Android 13 (API level 33), users can dismiss the notification 
+associated with a foreground service by default. To do so, users perform 
+a swipe gesture on the notification. Traditionally, the notification 
+isn't dismissed unless the foreground service is either stopped or 
+removed from the foreground.
+
+Check whether your app performs background starts
+--------------------------------------------------
+To better understand when your app attempts to launch a foreground 
+service while running in the background, you can enable notifications 
+that appear each time this behavior occurs.
+
+adb shell device_config put activity_manager \
+  default_fgs_starts_restriction_notification_enabled true
+  
+If you discover that your app starts foreground services while running 
+from the background, update your app's logic to use WorkManager.   
+
+Converting a background service to foreground service
+------------------------------------------------------
+It is not allowed but there are exceptions, check documentation for info
+
+
+To test that your app behaves as expected while and after a user stops 
+your app, run the following ADB command in a terminal window:
+
+adb shell cmd activity stop-app PACKAGE_NAME
+
+Exemptions from appearing in the Task Manager at all
+------------------------------------------------------
+The following apps can run a foreground service and not appear in the Task 
+Manager at all:
+
+System-level apps
+
+Safety apps; that is, apps that have the ROLE_EMERGENCY role
+Devices that are in demo mode
+Exemptions from being stoppable by users
+
+When the following types of apps run a foreground service, they appear in 
+the Task Manager, but there is no Stop button next to the app's name 
+for the user to tap:
+--------------------------------------------------------------------------
+
+Device owner apps
+Profile owner apps
+Persistent apps
+Apps that have the ROLE_DIALER role
+
+
+---------------------------------------
+Background Work Overview
+--------------------------------------
+Definition of background work
+-----------------------------------
+
+An app is running in the background when both the following conditions 
+are satisfied:
+
+1. None of the app's activities are currently visible to the user.
+2. The app isn't running any foreground services that started while 
+    an activity from the app was visible to the user.
+    
+Consider a case in which a foreground service starts while an activity 
+from the app is visible to the user. The user subsequently navigates 
+away from the app and returns to the home screen. In such cases, the 
+app is running in the foreground until the service's lifecycle ends.
+
+Common types of background work
+---------------------------------
+Background work falls into one of three primary categories:
+
+1. Immediate: Needs to execute right away and complete soon.
+2. Long Running: May take some time to complete.
+3. Deferrable: Does not need to run right away.
+
+   Likewise, background work in each of these three categories can be either 
+   persistent or impersistent:
+
+   1. Persistent work: Remains scheduled through app restarts and device 
+      reboots.
+   2. Impersistent work: No longer scheduled after the process ends. 
+
+Approaches to background work
+-----------------------------------
+You should approach impersistent or persistent work differently:
+
+1. All persistent work: You should use WorkManager for all forms of 
+   persistent work.
+   
+2. Immediate impersistent work: You should use Kotlin coroutines for 
+   immediate impersistent work. For Java programming language users, 
+   read the guide on threading for recommended options.
+
+3. Long-running and deferrable impersistent work: You shouldn't use 
+   long-running and deferrable impersistent work. You should instead 
+   complete such tasks through persistent work using WorkManager. 
+   
+
+Work is long running if it is likely to take more than ten minutes to complete.
+
+Where possible, you should chunk workloads and handle tasks as deferrable 
+work. Only use a long-running Worker where you can't chunk your workload.
+
+---------
+Alarms
+---------
+Alarms are a special use case that are not a part of background work.
+You should execute background work through coroutines and WorkManager.
+
+You should only use AlarmManager only for scheduling exact alarms such as 
+alarm clocks or calendar events. When using AlarmManager to schedule 
+background work, it wakes the device from Doze mode and its use can therefore 
+have a negative impact on battery life and overall system health. 
